@@ -1,26 +1,88 @@
 name: Publish Provider Package
 
+# Builds the provider controller image (embedding the terraform-provider-busbar
+# linux binary in a Terraform filesystem mirror), packages it into a Crossplane
+# .xpkg via the crossplane/build submodule, and pushes the .xpkg to ghcr.io.
+#
+# Push auth uses the built-in GITHUB_TOKEN (packages: write) — no PAT needed,
+# because the package lives in the same org (GetBusbar) as this repo.
+#
+# amd64-only for v0.1.0 (PLATFORMS=linux_amd64). Multi-arch would additionally
+# build linux_arm64; the terraform-provider-busbar release ships an arm64 zip,
+# so extending PLATFORMS is possible later.
+
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version string to use while publishing the package (e.g. v1.0.0-alpha.1)"
-        default: ''
-        required: false
-      go-version:
-        description: 'Go version to use if building needs to be done'
-        default: '1.24'
-        required: false
+        description: "Version tag to publish (semver, e.g. v0.1.0)"
+        default: "v0.1.0"
+        required: true
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  # crossplane/build derives VERSION from git describe by default; we pin it
+  # explicitly so dispatch and tag builds are reproducible.
+  XPKG_REG_ORGS: ghcr.io/getbusbar
+  XPKG_REG_ORGS_NO_PROMOTE: ghcr.io/getbusbar
+  REGISTRY_ORGS: ghcr.io/getbusbar
+  PLATFORMS: linux_amd64
 
 jobs:
-  publish-provider-package:
-    uses: crossplane-contrib/provider-workflows/.github/workflows/publish-provider.yml@451c4dc6ad3691b0a702a997a0ac24e8bbc8bbaa # main
-    with:
-      repository: provider-template
-      version: ${{ github.event.inputs.version }}
-      go-version: ${{ github.event.inputs.go-version }}
-      cleanup-disk: true
-    secrets:
-      GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
-      XPKG_MIRROR_TOKEN: ${{ secrets.XPKG_MIRROR_TOKEN }}
-      XPKG_MIRROR_ACCESS_ID: ${{ secrets.XPKG_MIRROR_ACCESS_ID }}
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            V="${GITHUB_REF_NAME}"
+          else
+            V="${{ github.event.inputs.version }}"
+          fi
+          echo "version=${V}" >> "$GITHUB_OUTPUT"
+          echo "Publishing version ${V}"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build controller image + .xpkg (embeds terraform-provider-busbar)
+        run: |
+          make build \
+            VERSION="${{ steps.ver.outputs.version }}" \
+            PLATFORMS="${PLATFORMS}"
+
+      - name: Push .xpkg to ghcr.io/getbusbar/provider-busbar
+        run: |
+          make xpkg.release.publish \
+            VERSION="${{ steps.ver.outputs.version }}" \
+            PLATFORMS="${PLATFORMS}" \
+            XPKG_REG_ORGS="${XPKG_REG_ORGS}"
+
+      - name: Summary
+        run: |
+          echo "Pushed ghcr.io/getbusbar/provider-busbar:${{ steps.ver.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
