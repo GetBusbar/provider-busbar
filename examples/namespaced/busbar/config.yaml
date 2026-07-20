@@ -1,0 +1,14 @@
+apiVersion: busbar.busbar.m.crossplane.io/v1alpha1
+kind: Config
+metadata:
+  namespace: default
+  name: gateway-config
+spec:
+  forProvider:
+    document: |
+      pools:
+        default:
+          models:
+            - openai/gpt-4o-mini
+  providerConfigRef:
+    name: default

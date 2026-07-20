@@ -1,0 +1,16 @@
+apiVersion: busbar.busbar.crossplane.io/v1alpha1
+kind: VirtualKey
+metadata:
+  name: team-alpha-key
+spec:
+  forProvider:
+    name: team-alpha
+    allowedPools:
+      - default
+    maxBudgetCents: 500000
+    budgetPeriod: monthly
+    rpmLimit: 600
+    tpmLimit: 200000
+    issueAwsCredential: false
+  providerConfigRef:
+    name: default

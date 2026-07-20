@@ -1,0 +1,14 @@
+apiVersion: busbar.busbar.m.crossplane.io/v1alpha1
+kind: Hook
+metadata:
+  namespace: default
+  name: pii-redactor
+spec:
+  forProvider:
+    name: pii-redactor
+    kind: prompt
+    at: pre
+    priority: 100
+    prompt: "Redact any personally identifiable information from the following."
+  providerConfigRef:
+    name: default
