@@ -83,6 +83,20 @@ jobs:
             PLATFORMS="${PLATFORMS}" \
             XPKG_REG_ORGS="${XPKG_REG_ORGS}"
 
-      - name: Summary
+      - name: Tag :latest
         run: |
-          echo "Pushed ghcr.io/getbusbar/provider-busbar:${{ steps.ver.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          docker buildx imagetools create \
+            -t ghcr.io/getbusbar/provider-busbar:latest \
+            ghcr.io/getbusbar/provider-busbar:${{ steps.ver.outputs.version }}
+
+      - name: Verify package on ghcr.io
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## Published" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          gh api /orgs/GetBusbar/packages/container/provider-busbar \
+            --jq '{name, visibility, url: .html_url}' | tee -a "$GITHUB_STEP_SUMMARY"
+          gh api /orgs/GetBusbar/packages/container/provider-busbar/versions \
+            --jq '.[] | {tags: .metadata.container.tags}' | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
