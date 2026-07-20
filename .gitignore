@@ -10,5 +10,3 @@ cover.out
 .vscode/
 .idea/
 
-# build submodule (fetched via `make submodules`)
-/build/
