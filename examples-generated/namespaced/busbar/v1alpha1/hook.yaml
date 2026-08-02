@@ -1,0 +1,18 @@
+apiVersion: busbar.busbar.m.crossplane.io/v1alpha1
+kind: Hook
+metadata:
+  annotations:
+    meta.upbound.io/example-id: busbar/v1alpha1/hook
+  labels:
+    testing.upbound.io/example-name: ranker
+  name: ranker
+  namespace: crossplane-system
+spec:
+  forProvider:
+    kind: gate
+    onError: weighted
+    priority: 10
+    prompt: ro
+    settings: ${jsonencode({ min_score = 0.6 })}
+    timeoutMs: 100
+    webhook: https://ranker.internal.example/rank

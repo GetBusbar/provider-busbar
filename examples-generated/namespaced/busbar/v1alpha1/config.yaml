@@ -1,0 +1,31 @@
+apiVersion: busbar.busbar.m.crossplane.io/v1alpha1
+kind: Config
+metadata:
+  annotations:
+    meta.upbound.io/example-id: busbar/v1alpha1/config
+  labels:
+    testing.upbound.io/example-name: running
+  name: running
+  namespace: crossplane-system
+spec:
+  forProvider:
+    document: |-
+      ${jsonencode({
+          config = {
+            auth = null
+            models = {
+              "claude-sonnet" = { provider = "anthropic", max_concurrent = 8, max_requests = -1 }
+            }
+            providers = {
+              anthropic = { api_key_env = "ANTHROPIC_API_KEY" }
+            }
+            governance = {
+              enabled     = true
+              db_path     = "/var/lib/busbar/governance.db"
+              admin_token = var.busbar_admin_token
+            }
+          }
+          providers = {
+            anthropic = { protocol = "anthropic", base_url = "https://api.anthropic.com" }
+          }
+        })}

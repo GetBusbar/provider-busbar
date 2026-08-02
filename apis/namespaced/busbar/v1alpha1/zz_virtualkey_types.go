@@ -16,89 +16,114 @@ import (
 
 type VirtualKeyInitParameters struct {
 
+	// (List of String) Pools this key may target. Empty/unset means unrestricted. Immutable; changing it replaces the key (the mint spec is fixed at creation).
 	// Pools this key may target. Empty/unset means unrestricted. Immutable; changing it replaces the key (the mint spec is fixed at creation).
 	AllowedPools []*string `json:"allowedPools,omitempty" tf:"allowed_pools,omitempty"`
 
+	// (String) Budget window: one of total, daily, monthly. Defaults to total. Immutable; changing it replaces the key.
 	// Budget window: one of total, daily, monthly. Defaults to total. Immutable; changing it replaces the key.
 	BudgetPeriod *string `json:"budgetPeriod,omitempty" tf:"budget_period,omitempty"`
 
+	// style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
 	// When true, also mint an AWS-style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
 	IssueAwsCredential *bool `json:"issueAwsCredential,omitempty" tf:"issue_aws_credential,omitempty"`
 
+	// (Number) Spend cap in cents over the budget window (>= 0). Omit for unlimited. Mutable via PATCH.
 	// Spend cap in cents over the budget window (>= 0). Omit for unlimited. Mutable via PATCH.
 	MaxBudgetCents *float64 `json:"maxBudgetCents,omitempty" tf:"max_budget_cents,omitempty"`
 
+	// readable label (<= 256 chars). Immutable; changing it replaces the key.
 	// Human-readable label (<= 256 chars). Immutable; changing it replaces the key.
 	Name *string `json:"name,omitempty" tf:"name,omitempty"`
 
+	// per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// Requests-per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	RpmLimit *float64 `json:"rpmLimit,omitempty" tf:"rpm_limit,omitempty"`
 
+	// per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// Tokens-per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	TpmLimit *float64 `json:"tpmLimit,omitempty" tf:"tpm_limit,omitempty"`
 }
 
 type VirtualKeyObservation struct {
 
+	// (List of String) Pools this key may target. Empty/unset means unrestricted. Immutable; changing it replaces the key (the mint spec is fixed at creation).
 	// Pools this key may target. Empty/unset means unrestricted. Immutable; changing it replaces the key (the mint spec is fixed at creation).
 	AllowedPools []*string `json:"allowedPools,omitempty" tf:"allowed_pools,omitempty"`
 
+	// style access key id, when issue_aws_credential is true. Returned only at creation.
 	// AWS-style access key id, when issue_aws_credential is true. Returned only at creation.
 	AwsAccessKeyID *string `json:"awsAccessKeyId,omitempty" tf:"aws_access_key_id,omitempty"`
 
+	// (String) Budget window: one of total, daily, monthly. Defaults to total. Immutable; changing it replaces the key.
 	// Budget window: one of total, daily, monthly. Defaults to total. Immutable; changing it replaces the key.
 	BudgetPeriod *string `json:"budgetPeriod,omitempty" tf:"budget_period,omitempty"`
 
+	// (Number) Epoch seconds the key was minted.
 	// Epoch seconds the key was minted.
 	CreatedAt *float64 `json:"createdAt,omitempty" tf:"created_at,omitempty"`
 
+	// of-band via the admin API.
 	// Whether the key currently resolves. A key is created enabled; disable it out-of-band via the admin API.
 	Enabled *bool `json:"enabled,omitempty" tf:"enabled,omitempty"`
 
+	// assigned key id (e.g. vk_0123456789abcdef).
 	ID *string `json:"id,omitempty" tf:"id,omitempty"`
 
+	// style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
 	// When true, also mint an AWS-style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
 	IssueAwsCredential *bool `json:"issueAwsCredential,omitempty" tf:"issue_aws_credential,omitempty"`
 
+	// (Number) Spend cap in cents over the budget window (>= 0). Omit for unlimited. Mutable via PATCH.
 	// Spend cap in cents over the budget window (>= 0). Omit for unlimited. Mutable via PATCH.
 	MaxBudgetCents *float64 `json:"maxBudgetCents,omitempty" tf:"max_budget_cents,omitempty"`
 
+	// readable label (<= 256 chars). Immutable; changing it replaces the key.
 	// Human-readable label (<= 256 chars). Immutable; changing it replaces the key.
 	Name *string `json:"name,omitempty" tf:"name,omitempty"`
 
+	// per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// Requests-per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	RpmLimit *float64 `json:"rpmLimit,omitempty" tf:"rpm_limit,omitempty"`
 
+	// per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// Tokens-per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	TpmLimit *float64 `json:"tpmLimit,omitempty" tf:"tpm_limit,omitempty"`
 }
 
 type VirtualKeyParameters struct {
 
+	// (List of String) Pools this key may target. Empty/unset means unrestricted. Immutable; changing it replaces the key (the mint spec is fixed at creation).
 	// Pools this key may target. Empty/unset means unrestricted. Immutable; changing it replaces the key (the mint spec is fixed at creation).
 	// +kubebuilder:validation:Optional
 	AllowedPools []*string `json:"allowedPools,omitempty" tf:"allowed_pools,omitempty"`
 
+	// (String) Budget window: one of total, daily, monthly. Defaults to total. Immutable; changing it replaces the key.
 	// Budget window: one of total, daily, monthly. Defaults to total. Immutable; changing it replaces the key.
 	// +kubebuilder:validation:Optional
 	BudgetPeriod *string `json:"budgetPeriod,omitempty" tf:"budget_period,omitempty"`
 
+	// style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
 	// When true, also mint an AWS-style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
 	// +kubebuilder:validation:Optional
 	IssueAwsCredential *bool `json:"issueAwsCredential,omitempty" tf:"issue_aws_credential,omitempty"`
 
+	// (Number) Spend cap in cents over the budget window (>= 0). Omit for unlimited. Mutable via PATCH.
 	// Spend cap in cents over the budget window (>= 0). Omit for unlimited. Mutable via PATCH.
 	// +kubebuilder:validation:Optional
 	MaxBudgetCents *float64 `json:"maxBudgetCents,omitempty" tf:"max_budget_cents,omitempty"`
 
+	// readable label (<= 256 chars). Immutable; changing it replaces the key.
 	// Human-readable label (<= 256 chars). Immutable; changing it replaces the key.
 	// +kubebuilder:validation:Optional
 	Name *string `json:"name,omitempty" tf:"name,omitempty"`
 
+	// per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// Requests-per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// +kubebuilder:validation:Optional
 	RpmLimit *float64 `json:"rpmLimit,omitempty" tf:"rpm_limit,omitempty"`
 
+	// per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// Tokens-per-minute cap (>= 1). Omit for unlimited. Mutable via PATCH.
 	// +kubebuilder:validation:Optional
 	TpmLimit *float64 `json:"tpmLimit,omitempty" tf:"tpm_limit,omitempty"`
@@ -131,7 +156,7 @@ type VirtualKeyStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
-// VirtualKey is the Schema for the VirtualKeys API. <no value>
+// VirtualKey is the Schema for the VirtualKeys API. A governance virtual key: a mintable, revocable credential with budget and rate caps scoped to a set of pools (POST/GET/PATCH/DELETE /api/v1/admin/keys). The plaintext secret is returned by busbar only once, at creation, and is stored in state as a sensitive value; refreshes update metadata (budget/limits/enabled) but never the secret. Requires governance: to be enabled on the gateway.
 // +kubebuilder:printcolumn:name="SYNCED",type="string",JSONPath=".status.conditions[?(@.type=='Synced')].status"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="EXTERNAL-NAME",type="string",JSONPath=".metadata.annotations.crossplane\\.io/external-name"

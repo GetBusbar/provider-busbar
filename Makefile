@@ -11,11 +11,12 @@ export TERRAFORM_VERSION ?= 1.5.7
 TERRAFORM_VERSION_VALID := $(shell [ "$(TERRAFORM_VERSION)" = "`printf "$(TERRAFORM_VERSION)\n1.6" | sort -V | head -n1`" ] && echo 1 || echo 0)
 
 # The busbar Terraform provider (terraform-plugin-framework / protocol 6).
-# Registry source getbusbar/busbar, version 0.1.0. The runtime pulls this
+# Registry source getbusbar/busbar (published on registry.terraform.io),
+# version 0.1.1 (tracks the busbar 1.5.0 admin API). The runtime pulls this
 # provider binary; the generation pipeline reads its schema (config/schema.json).
 export TERRAFORM_PROVIDER_SOURCE ?= getbusbar/busbar
 export TERRAFORM_PROVIDER_REPO ?= https://github.com/GetBusbar/terraform-provider-busbar
-export TERRAFORM_PROVIDER_VERSION ?= 0.1.0
+export TERRAFORM_PROVIDER_VERSION ?= 0.1.1
 export TERRAFORM_PROVIDER_DOWNLOAD_NAME ?= terraform-provider-busbar
 export TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX ?= https://github.com/GetBusbar/terraform-provider-busbar/releases/download/v$(TERRAFORM_PROVIDER_VERSION)
 export TERRAFORM_NATIVE_PROVIDER_BINARY ?= terraform-provider-busbar_v$(TERRAFORM_PROVIDER_VERSION)
@@ -68,17 +69,17 @@ CROSSPLANE_VERSION = 2.2.1
 # ====================================================================================
 # Setup Images
 
-REGISTRY_ORGS ?= ghcr.io/crossplane-contrib
+REGISTRY_ORGS ?= ghcr.io/getbusbar
 IMAGES = $(PROJECT_NAME)
 -include build/makelib/imagelight.mk
 
 # ====================================================================================
 # Setup XPKG
 
-XPKG_REG_ORGS ?= ghcr.io/crossplane-contrib
+XPKG_REG_ORGS ?= ghcr.io/getbusbar
 # NOTE(hasheddan): skip promoting on xpkg.crossplane.io as channel tags are
 # inferred.
-XPKG_REG_ORGS_NO_PROMOTE ?= ghcr.io/crossplane-contrib
+XPKG_REG_ORGS_NO_PROMOTE ?= ghcr.io/getbusbar
 XPKGS = $(PROJECT_NAME)
 -include build/makelib/xpkg.mk
 
@@ -124,12 +125,22 @@ $(TERRAFORM): check-terraform-version
 	@rm -fr $(TOOLS_HOST_DIR)/tmp-terraform
 	@$(OK) installing terraform $(HOSTOS)-$(HOSTARCH)
 
+# NOTE: the provider zip is fetched from the GitHub release into a local
+# filesystem mirror rather than installed straight from the registry, because
+# Terraform 1.5.x's openpgp library cannot verify the Ed25519 GPG key the
+# registry release is signed with ("unsupported feature: public key type: 22").
+# Filesystem mirrors skip registry signature verification; integrity still
+# comes from fetching the official release artifact over TLS.
+TERRAFORM_PROVIDER_MIRROR := $(TERRAFORM_WORKDIR)/mirror
 $(TERRAFORM_PROVIDER_SCHEMA): $(TERRAFORM)
 	@$(INFO) generating provider schema for $(TERRAFORM_PROVIDER_SOURCE) $(TERRAFORM_PROVIDER_VERSION)
-	@mkdir -p $(TERRAFORM_WORKDIR)
+	@mkdir -p $(TERRAFORM_WORKDIR) $(TERRAFORM_PROVIDER_MIRROR)/registry.terraform.io/$(TERRAFORM_PROVIDER_SOURCE)
+	@curl -fsSL $(TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX)/$(TERRAFORM_PROVIDER_DOWNLOAD_NAME)_$(TERRAFORM_PROVIDER_VERSION)_$(SAFEHOST_PLATFORM).zip \
+		-o $(TERRAFORM_PROVIDER_MIRROR)/registry.terraform.io/$(TERRAFORM_PROVIDER_SOURCE)/$(TERRAFORM_PROVIDER_DOWNLOAD_NAME)_$(TERRAFORM_PROVIDER_VERSION)_$(SAFEHOST_PLATFORM).zip
+	@printf 'provider_installation {\n  filesystem_mirror {\n    path    = "%s"\n    include = ["registry.terraform.io/$(TERRAFORM_PROVIDER_SOURCE)"]\n  }\n  direct {\n    exclude = ["registry.terraform.io/$(TERRAFORM_PROVIDER_SOURCE)"]\n  }\n}\n' "$(TERRAFORM_PROVIDER_MIRROR)" > $(TERRAFORM_WORKDIR)/schema.tfrc
 	@echo '{"terraform":[{"required_providers":[{"provider":{"source":"'"$(TERRAFORM_PROVIDER_SOURCE)"'","version":"'"$(TERRAFORM_PROVIDER_VERSION)"'"}}],"required_version":"'"$(TERRAFORM_VERSION)"'"}]}' > $(TERRAFORM_WORKDIR)/main.tf.json
-	@$(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) init > $(TERRAFORM_WORKDIR)/terraform-logs.txt 2>&1
-	@$(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) providers schema -json=true > $(TERRAFORM_PROVIDER_SCHEMA) 2>> $(TERRAFORM_WORKDIR)/terraform-logs.txt
+	@TF_CLI_CONFIG_FILE=$(TERRAFORM_WORKDIR)/schema.tfrc $(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) init > $(TERRAFORM_WORKDIR)/terraform-logs.txt 2>&1
+	@TF_CLI_CONFIG_FILE=$(TERRAFORM_WORKDIR)/schema.tfrc $(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) providers schema -json=true > $(TERRAFORM_PROVIDER_SCHEMA) 2>> $(TERRAFORM_WORKDIR)/terraform-logs.txt
 	@$(OK) generating provider schema for $(TERRAFORM_PROVIDER_SOURCE) $(TERRAFORM_PROVIDER_VERSION)
 
 pull-docs:

@@ -34,7 +34,11 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Hook is the Schema for the Hooks API. <no value>
+        description: 'Hook is the Schema for the Hooks API. A routing hook: an external
+          tap or gate reached over a unix socket or webhook, wired into busbar''s
+          request/ranking pipeline (POST/GET/PUT/DELETE /api/v1/admin/hooks). Exactly
+          one of socket or webhook must be set. The grant fields (kind, prompt, user)
+          are immutable once registered — changing them replaces the hook.'
         properties:
           apiVersion:
             description: |-
@@ -59,57 +63,69 @@ spec:
               forProvider:
                 properties:
                   at:
-                    description: 'Pipeline stage: request, route, attempt, or completion.
-                      Null lets busbar place it by kind.'
+                    description: |-
+                      (String) Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
+                      Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
                     type: string
                   default:
-                    description: Whether this hook is the default for its stage. Write-only
-                      (not echoed by reads).
+                    description: |-
+                      only (not echoed by reads).
+                      Whether this hook is the default for its stage. Write-only (not echoed by reads).
                     type: boolean
                   global:
-                    description: Whether the hook applies globally (all pools). Defaults
-                      to false. May read back true if wired via global_hooks.
+                    description: |-
+                      (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
+                      Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
                     type: boolean
                   kind:
-                    description: 'Transport contract: tap (fire-and-forget, non-blocking)
-                      or gate (blocking, may rewrite/reject). Immutable grant; changing
-                      it replaces the hook.'
+                    description: |-
+                      and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                      Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
                     type: string
                   onEmpty:
-                    description: 'Fallback policy when the hook yields an empty ranking:
-                      weighted, reject, or first. Write-only (not echoed by reads).'
+                    description: |-
+                      only (not echoed by reads).
+                      Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Write-only (not echoed by reads).
                     type: string
                   onError:
-                    description: 'Behavior when the hook errors/times out: a terminal
-                      (weighted, reject, first, nothing) or another hook name. Defaults
-                      to nothing.'
+                    description: |-
+                      (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
+                      Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
                     type: string
                   priority:
-                    description: Ordering priority within a stage. Defaults to 0.
+                    description: |-
+                      (Number) Ordering priority within a stage. Defaults to 0.
+                      Ordering priority within a stage. Defaults to 0.
                     type: number
                   prompt:
-                    description: 'Prompt-content access grant: no, ro, or rw. Defaults
-                      to no. Immutable grant; changing it replaces the hook. (rw is
-                      invalid on a tap.)'
+                    description: |-
+                      content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
+                      Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
                     type: string
                   settings:
-                    description: Opaque per-hook settings as a JSON object string
-                      (<= 64KiB, <= 256 keys). Defaults to {}.
+                    description: |-
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
                     type: string
                   socket:
-                    description: Unix socket path to the hook process. Exactly one
-                      of socket or webhook.
+                    description: |-
+                      (String) Unix socket path to the hook process. Exactly one of socket or webhook.
+                      Unix socket path to the hook process. Exactly one of socket or webhook.
                     type: string
                   timeoutMs:
-                    description: Per-call timeout in milliseconds. Defaults to 1.
+                    description: |-
+                      call timeout in milliseconds. Defaults to 1.
+                      Per-call timeout in milliseconds. Defaults to 1.
                     type: number
                   user:
-                    description: 'Caller-identity access grant: no or ro. Defaults
-                      to no. Immutable grant; changing it replaces the hook.'
+                    description: |-
+                      identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
+                      Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
                     type: string
                   webhook:
-                    description: Webhook URL for the hook. Exactly one of socket or
-                      webhook.
+                    description: |-
+                      (String) Webhook URL for the hook. Exactly one of socket or webhook.
+                      Webhook URL for the hook. Exactly one of socket or webhook.
                     type: string
                 type: object
               initProvider:
@@ -126,57 +142,69 @@ spec:
                   autoscaler.
                 properties:
                   at:
-                    description: 'Pipeline stage: request, route, attempt, or completion.
-                      Null lets busbar place it by kind.'
+                    description: |-
+                      (String) Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
+                      Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
                     type: string
                   default:
-                    description: Whether this hook is the default for its stage. Write-only
-                      (not echoed by reads).
+                    description: |-
+                      only (not echoed by reads).
+                      Whether this hook is the default for its stage. Write-only (not echoed by reads).
                     type: boolean
                   global:
-                    description: Whether the hook applies globally (all pools). Defaults
-                      to false. May read back true if wired via global_hooks.
+                    description: |-
+                      (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
+                      Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
                     type: boolean
                   kind:
-                    description: 'Transport contract: tap (fire-and-forget, non-blocking)
-                      or gate (blocking, may rewrite/reject). Immutable grant; changing
-                      it replaces the hook.'
+                    description: |-
+                      and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                      Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
                     type: string
                   onEmpty:
-                    description: 'Fallback policy when the hook yields an empty ranking:
-                      weighted, reject, or first. Write-only (not echoed by reads).'
+                    description: |-
+                      only (not echoed by reads).
+                      Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Write-only (not echoed by reads).
                     type: string
                   onError:
-                    description: 'Behavior when the hook errors/times out: a terminal
-                      (weighted, reject, first, nothing) or another hook name. Defaults
-                      to nothing.'
+                    description: |-
+                      (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
+                      Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
                     type: string
                   priority:
-                    description: Ordering priority within a stage. Defaults to 0.
+                    description: |-
+                      (Number) Ordering priority within a stage. Defaults to 0.
+                      Ordering priority within a stage. Defaults to 0.
                     type: number
                   prompt:
-                    description: 'Prompt-content access grant: no, ro, or rw. Defaults
-                      to no. Immutable grant; changing it replaces the hook. (rw is
-                      invalid on a tap.)'
+                    description: |-
+                      content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
+                      Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
                     type: string
                   settings:
-                    description: Opaque per-hook settings as a JSON object string
-                      (<= 64KiB, <= 256 keys). Defaults to {}.
+                    description: |-
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
                     type: string
                   socket:
-                    description: Unix socket path to the hook process. Exactly one
-                      of socket or webhook.
+                    description: |-
+                      (String) Unix socket path to the hook process. Exactly one of socket or webhook.
+                      Unix socket path to the hook process. Exactly one of socket or webhook.
                     type: string
                   timeoutMs:
-                    description: Per-call timeout in milliseconds. Defaults to 1.
+                    description: |-
+                      call timeout in milliseconds. Defaults to 1.
+                      Per-call timeout in milliseconds. Defaults to 1.
                     type: number
                   user:
-                    description: 'Caller-identity access grant: no or ro. Defaults
-                      to no. Immutable grant; changing it replaces the hook.'
+                    description: |-
+                      identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
+                      Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
                     type: string
                   webhook:
-                    description: Webhook URL for the hook. Exactly one of socket or
-                      webhook.
+                    description: |-
+                      (String) Webhook URL for the hook. Exactly one of socket or webhook.
+                      Webhook URL for the hook. Exactly one of socket or webhook.
                     type: string
                 type: object
               managementPolicies:
@@ -248,59 +276,71 @@ spec:
               atProvider:
                 properties:
                   at:
-                    description: 'Pipeline stage: request, route, attempt, or completion.
-                      Null lets busbar place it by kind.'
+                    description: |-
+                      (String) Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
+                      Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
                     type: string
                   default:
-                    description: Whether this hook is the default for its stage. Write-only
-                      (not echoed by reads).
+                    description: |-
+                      only (not echoed by reads).
+                      Whether this hook is the default for its stage. Write-only (not echoed by reads).
                     type: boolean
                   global:
-                    description: Whether the hook applies globally (all pools). Defaults
-                      to false. May read back true if wired via global_hooks.
+                    description: |-
+                      (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
+                      Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
                     type: boolean
                   id:
                     type: string
                   kind:
-                    description: 'Transport contract: tap (fire-and-forget, non-blocking)
-                      or gate (blocking, may rewrite/reject). Immutable grant; changing
-                      it replaces the hook.'
+                    description: |-
+                      and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                      Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
                     type: string
                   onEmpty:
-                    description: 'Fallback policy when the hook yields an empty ranking:
-                      weighted, reject, or first. Write-only (not echoed by reads).'
+                    description: |-
+                      only (not echoed by reads).
+                      Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Write-only (not echoed by reads).
                     type: string
                   onError:
-                    description: 'Behavior when the hook errors/times out: a terminal
-                      (weighted, reject, first, nothing) or another hook name. Defaults
-                      to nothing.'
+                    description: |-
+                      (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
+                      Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
                     type: string
                   priority:
-                    description: Ordering priority within a stage. Defaults to 0.
+                    description: |-
+                      (Number) Ordering priority within a stage. Defaults to 0.
+                      Ordering priority within a stage. Defaults to 0.
                     type: number
                   prompt:
-                    description: 'Prompt-content access grant: no, ro, or rw. Defaults
-                      to no. Immutable grant; changing it replaces the hook. (rw is
-                      invalid on a tap.)'
+                    description: |-
+                      content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
+                      Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
                     type: string
                   settings:
-                    description: Opaque per-hook settings as a JSON object string
-                      (<= 64KiB, <= 256 keys). Defaults to {}.
+                    description: |-
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
                     type: string
                   socket:
-                    description: Unix socket path to the hook process. Exactly one
-                      of socket or webhook.
+                    description: |-
+                      (String) Unix socket path to the hook process. Exactly one of socket or webhook.
+                      Unix socket path to the hook process. Exactly one of socket or webhook.
                     type: string
                   timeoutMs:
-                    description: Per-call timeout in milliseconds. Defaults to 1.
+                    description: |-
+                      call timeout in milliseconds. Defaults to 1.
+                      Per-call timeout in milliseconds. Defaults to 1.
                     type: number
                   user:
-                    description: 'Caller-identity access grant: no or ro. Defaults
-                      to no. Immutable grant; changing it replaces the hook.'
+                    description: |-
+                      identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
+                      Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
                     type: string
                   webhook:
-                    description: Webhook URL for the hook. Exactly one of socket or
-                      webhook.
+                    description: |-
+                      (String) Webhook URL for the hook. Exactly one of socket or webhook.
+                      Webhook URL for the hook. Exactly one of socket or webhook.
                     type: string
                 type: object
               conditions:

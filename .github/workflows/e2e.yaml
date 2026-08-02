@@ -9,9 +9,40 @@ on:
     types: [created]
 
 env:
-  GO_VERSION: "1.24"
+  GO_VERSION: "1.26"
 
 jobs:
+  # E2E needs repo secrets that are NOT provisioned yet (see README,
+  # "End-to-end tests"). Rather than letting the pipeline start and fail (or
+  # silently pretend coverage), this job checks secret presence and makes the
+  # downstream jobs skip with a loud notice until the secrets are armed.
+  check-secrets:
+    runs-on: ubuntu-latest
+    env:
+      HAS_UPTEST_CLOUD_CREDENTIALS: ${{ secrets.UPTEST_CLOUD_CREDENTIALS != '' }}
+      HAS_UPTEST_DATASOURCE: ${{ secrets.UPTEST_DATASOURCE != '' }}
+    outputs:
+      armed: ${{ steps.gate.outputs.armed }}
+    steps:
+      - name: Check e2e secret provisioning
+        id: gate
+        run: |
+          armed=true
+          if [ "$HAS_UPTEST_CLOUD_CREDENTIALS" != "true" ]; then
+            echo "::warning title=e2e SKIPPED::SKIPPED: secret UPTEST_CLOUD_CREDENTIALS not provisioned on this repository. End-to-end tests cannot run until it is added (busbar admin credentials JSON; see README 'End-to-end tests')."
+            armed=false
+          fi
+          if [ "$HAS_UPTEST_DATASOURCE" != "true" ]; then
+            echo "::warning title=e2e SKIPPED::SKIPPED: secret UPTEST_DATASOURCE not provisioned on this repository. End-to-end tests cannot run until it is added (uptest datasource YAML; see README 'End-to-end tests')."
+            armed=false
+          fi
+          echo "armed=$armed" >> "$GITHUB_OUTPUT"
+          if [ "$armed" = "true" ]; then
+            echo "All e2e secrets provisioned; downstream jobs will run."
+          else
+            echo "E2E SKIPPED: required secrets missing; downstream jobs will not run."
+          fi
+
   check-permissions:
     runs-on: ubuntu-latest
     outputs:
@@ -36,8 +67,10 @@ jobs:
           echo "permission=$GRANTED" >> "$GITHUB_OUTPUT"
 
   get-example-list:
-    needs: check-permissions
-    if: ${{ (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
+    needs:
+      - check-secrets
+      - check-permissions
+    if: ${{ needs.check-secrets.outputs.armed == 'true' && (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
     runs-on: ubuntu-latest
     outputs:
       example_list: ${{ steps.get-example-list-name.outputs.example-list }}
@@ -95,9 +128,10 @@ jobs:
 
   uptest:
     needs:
+      - check-secrets
       - check-permissions
       - get-example-list
-    if: ${{ (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
+    if: ${{ needs.check-secrets.outputs.armed == 'true' && (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
     runs-on: ubuntu-latest
 
     steps:
