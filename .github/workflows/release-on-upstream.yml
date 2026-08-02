@@ -1,0 +1,185 @@
+# Re-cut this Crossplane provider's own next xpkg when the busbar stack ships.
+#
+# Upstream for THIS repo is GetBusbar/terraform-provider-busbar: the Makefile pins
+# TERRAFORM_PROVIDER_VERSION, and the build embeds that provider release's linux binary + generates
+# CRDs from its schema. That pin IS this repo's record of what it was last built against.
+#
+# The busbar-core upstream-release dispatch is only a WAKE signal here — this repo does not consume
+# busbar core directly. On any trigger this resolves terraform-provider-busbar's LATEST release and
+# only proceeds if it is newer than the current pin. That also fixes the fan-out ordering race: when
+# busbar core dispatches to the whole fleet at once, the terraform-provider release may not exist yet
+# — we simply no-op, and the daily cron (or the next dispatch) self-heals once it does. Runaway-safe:
+# an idle day, or an already-ingested provider release, is a no-op, never a spurious re-cut.
+#
+# On a real advance this re-pins TERRAFORM_PROVIDER_VERSION, `make generate`s the CRDs/examples,
+# bumps THIS repo's own v* tag, commits, and pushes the tag — which fires publish-provider-package.yml
+# (builds the controller image + .xpkg and pushes to ghcr.io/getbusbar/provider-busbar via the
+# built-in GITHUB_TOKEN; that GHCR publish already works, no extra secret needed). The e2e workflow
+# (UPTEST_* secrets) is separate and intentionally NOT gating the release.
+#
+# No plain `push:` trigger, so merging this file cannot itself cut a release. Pushes use
+# RELEASE_DISPATCH_TOKEN (org secret, bypass-capable) as busbar-bot; plain GITHUB_TOKEN is rejected
+# by branch protection on main.
+name: release-on-upstream
+
+on:
+  repository_dispatch:
+    types: [upstream-release]
+  schedule:
+    - cron: "37 6 * * *" # daily; minute staggered per repo so the fleet's crons don't all fire at once
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit OWN version to cut (e.g. 0.1.1). Blank = patch-bump this repo's latest v* tag, or seed the first tag."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-on-upstream-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  # This repo has zero tags today; the first real release seeds here. Independent of the busbar and
+  # terraform-provider version numbers — this is provider-busbar's OWN Crossplane package version.
+  SEED_VERSION: v0.1.1
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (bypass-capable token, full history + tags, build submodule)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: true
+          token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Configure git identity
+        run: |
+          git config user.name "busbar-bot"
+          git config user.email "bot@getbusbar.com"
+
+      - name: Resolve whether a newer terraform-provider-busbar warrants a re-cut
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          cur_pin="$(awk -F'=' '/^export TERRAFORM_PROVIDER_VERSION[[:space:]]*\?=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' Makefile)"
+          echo "current TERRAFORM_PROVIDER_VERSION pin: ${cur_pin:-<none>}"
+          # Always resolve the upstream terraform-provider's LATEST release (the dispatch payload is
+          # just a wake signal; our real dependency is the TF provider, not busbar core).
+          target_tag="$(gh api repos/GetBusbar/terraform-provider-busbar/releases/latest --jq .tag_name 2>/dev/null || true)"
+          target_ver="${target_tag#v}"
+          echo "terraform-provider-busbar latest release: ${target_tag:-none} (version ${target_ver:-none})"
+
+          force=no
+          [ "$EVENT_NAME" = workflow_dispatch ] && force=yes
+
+          pin_stale=no
+          if [ -n "$target_ver" ] && [ "$target_ver" != "$cur_pin" ]; then
+            newest="$(printf '%s\n%s\n' "$cur_pin" "$target_ver" | sort -V | tail -1)"
+            [ "$newest" = "$target_ver" ] && pin_stale=yes
+          fi
+
+          should_cut=no
+          if [ "$force" = yes ]; then
+            should_cut=yes
+            echo "::notice::manual workflow_dispatch -> cutting a release (pin_stale=${pin_stale})"
+          elif [ "$pin_stale" = yes ]; then
+            should_cut=yes
+            echo "::notice::terraform-provider advanced (pinned=${cur_pin} -> ${target_ver}) -> cutting a release"
+          else
+            echo "::notice::no newer terraform-provider (pinned=${cur_pin:-none}, latest=${target_ver:-none}) -> nothing to do"
+          fi
+          {
+            echo "should_cut=$should_cut"
+            echo "pin_stale=$pin_stale"
+            echo "target_ver=$target_ver"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Re-pin TERRAFORM_PROVIDER_VERSION + regenerate
+        if: steps.resolve.outputs.should_cut == 'yes' && steps.resolve.outputs.pin_stale == 'yes'
+        env:
+          TARGET_VER: ${{ steps.resolve.outputs.target_ver }}
+        run: |
+          set -euo pipefail
+          sed -i -E "s|^(export TERRAFORM_PROVIDER_VERSION[[:space:]]*\?=[[:space:]]*).*|\1${TARGET_VER}|" Makefile
+          grep -n 'TERRAFORM_PROVIDER_VERSION ?=' Makefile
+          make generate
+
+      - name: Compute this repo's next version
+        id: ver
+        if: steps.resolve.outputs.should_cut == 'yes'
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            next="v${INPUT_VERSION#v}"
+            echo "::notice::using explicit workflow_dispatch version -> ${next}"
+          else
+            latest="$(git tag --list 'v*' | sort -V | tail -1)"
+            if [ -z "$latest" ]; then
+              next="$SEED_VERSION"
+              echo "::notice::no existing v* tag -> seeding first release ${next}"
+            else
+              base="${latest#v}"
+              major="$(echo "$base" | cut -d. -f1)"
+              minor="$(echo "$base" | cut -d. -f2)"
+              patch="$(echo "$base" | cut -d. -f3)"
+              next="v${major}.${minor}.$((patch + 1))"
+              echo "::notice::latest tag ${latest} -> next ${next}"
+            fi
+          fi
+          echo "tag=${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Guard — no-op if the tag already exists
+        id: guard
+        if: steps.resolve.outputs.should_cut == 'yes'
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::notice::${TAG} already exists — idempotent no-op, exiting 0"
+            echo "exists=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit the re-pin + regenerated code to main
+        if: steps.guard.outputs.exists == 'no' && steps.resolve.outputs.pin_stale == 'yes'
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+          TARGET_VER: ${{ steps.resolve.outputs.target_ver }}
+        run: |
+          set -euo pipefail
+          git add Makefile apis config examples examples-generated package
+          if git diff --cached --quiet; then
+            echo "::notice::pin + generated code already current, no re-pin commit needed"
+          else
+            git commit -m "provider: re-pin terraform-provider-busbar to v${TARGET_VER} for the ${TAG} release"
+            git push origin HEAD:main
+          fi
+
+      - name: Create and push the release tag
+        if: steps.guard.outputs.exists == 'no'
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git tag "${TAG}"
+          git push origin "refs/tags/${TAG}"
+          echo "::notice::pushed ${TAG} — publish-provider-package.yml will now build the .xpkg and push it to ghcr.io/getbusbar/provider-busbar"
