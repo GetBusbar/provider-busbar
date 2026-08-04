@@ -30,7 +30,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Explicit OWN version to cut (e.g. 0.1.1). Blank = patch-bump this repo's latest v* tag, or seed the first tag."
+        description: "Explicit OWN version to cut (e.g. 0.1.0). Blank = patch-bump this repo's latest v* tag, or seed the first tag."
         required: false
         type: string
 
@@ -43,8 +43,10 @@ concurrency:
 
 env:
   # This repo has zero tags today; the first real release seeds here. Independent of the busbar and
-  # terraform-provider version numbers — this is provider-busbar's OWN Crossplane package version.
-  SEED_VERSION: v0.1.1
+  # terraform-provider version numbers — this is provider-busbar's OWN Crossplane package version,
+  # starting its own v0.1.0 line (mixed-model: wrappers keep independent semver, they do NOT mirror
+  # busbar's version).
+  SEED_VERSION: v0.1.0
 
 jobs:
   cut:
