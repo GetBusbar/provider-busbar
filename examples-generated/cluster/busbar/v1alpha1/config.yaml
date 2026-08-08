@@ -11,17 +11,20 @@ spec:
     document: |-
       ${jsonencode({
           config = {
-            auth = null
-            models = {
-              "claude-sonnet" = { provider = "anthropic", max_concurrent = 8, max_requests = -1 }
+            auth = {
+              chain = ["keys"]
+              admin_auth = [
+                { admin-tokens = { token = { env = "BUSBAR_ADMIN_TOKEN" } } }
+              ]
             }
             providers = {
-              anthropic = { api_key_env = "ANTHROPIC_API_KEY" }
+              anthropic = { api_key = { env = "ANTHROPIC_API_KEY" } }
             }
-            governance = {
-              enabled     = true
-              db_path     = "/var/lib/busbar/governance.db"
-              admin_token = var.busbar_admin_token
+            models = {
+              "claude-sonnet" = { provider = "anthropic" }
+            }
+            groups = {
+              team-checkout = {}
             }
           }
           providers = {
