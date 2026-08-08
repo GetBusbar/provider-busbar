@@ -21,7 +21,7 @@ func (mg *VirtualKey) GetTerraformResourceType() string {
 
 // GetConnectionDetailsMapping for this VirtualKey
 func (tr *VirtualKey) GetConnectionDetailsMapping() map[string]string {
-	return map[string]string{"aws_secret_access_key": "status.atProvider.awsSecretAccessKey", "secret": "status.atProvider.secret"}
+	return map[string]string{"aws_secret_access_key": "status.atProvider.awsSecretAccessKey", "token": "status.atProvider.token"}
 }
 
 // GetObservation of this VirtualKey

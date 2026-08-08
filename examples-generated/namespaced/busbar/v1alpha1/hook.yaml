@@ -11,8 +11,8 @@ spec:
   forProvider:
     kind: gate
     onError: weighted
+    plugin: ranking
     priority: 10
     prompt: ro
     settings: ${jsonencode({ min_score = 0.6 })}
     timeoutMs: 100
-    webhook: https://ranker.internal.example/rank

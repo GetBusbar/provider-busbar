@@ -236,6 +236,11 @@ func (in *HookInitParameters) DeepCopyInto(out *HookInitParameters) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Plugin != nil {
+		in, out := &in.Plugin, &out.Plugin
+		*out = new(string)
+		**out = **in
+	}
 	if in.Priority != nil {
 		in, out := &in.Priority, &out.Priority
 		*out = new(float64)
@@ -251,11 +256,6 @@ func (in *HookInitParameters) DeepCopyInto(out *HookInitParameters) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Socket != nil {
-		in, out := &in.Socket, &out.Socket
-		*out = new(string)
-		**out = **in
-	}
 	if in.TimeoutMs != nil {
 		in, out := &in.TimeoutMs, &out.TimeoutMs
 		*out = new(float64)
@@ -263,11 +263,6 @@ func (in *HookInitParameters) DeepCopyInto(out *HookInitParameters) {
 	}
 	if in.User != nil {
 		in, out := &in.User, &out.User
-		*out = new(string)
-		**out = **in
-	}
-	if in.Webhook != nil {
-		in, out := &in.Webhook, &out.Webhook
 		*out = new(string)
 		**out = **in
 	}
@@ -353,6 +348,11 @@ func (in *HookObservation) DeepCopyInto(out *HookObservation) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Plugin != nil {
+		in, out := &in.Plugin, &out.Plugin
+		*out = new(string)
+		**out = **in
+	}
 	if in.Priority != nil {
 		in, out := &in.Priority, &out.Priority
 		*out = new(float64)
@@ -368,11 +368,6 @@ func (in *HookObservation) DeepCopyInto(out *HookObservation) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Socket != nil {
-		in, out := &in.Socket, &out.Socket
-		*out = new(string)
-		**out = **in
-	}
 	if in.TimeoutMs != nil {
 		in, out := &in.TimeoutMs, &out.TimeoutMs
 		*out = new(float64)
@@ -380,11 +375,6 @@ func (in *HookObservation) DeepCopyInto(out *HookObservation) {
 	}
 	if in.User != nil {
 		in, out := &in.User, &out.User
-		*out = new(string)
-		**out = **in
-	}
-	if in.Webhook != nil {
-		in, out := &in.Webhook, &out.Webhook
 		*out = new(string)
 		**out = **in
 	}
@@ -433,6 +423,11 @@ func (in *HookParameters) DeepCopyInto(out *HookParameters) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Plugin != nil {
+		in, out := &in.Plugin, &out.Plugin
+		*out = new(string)
+		**out = **in
+	}
 	if in.Priority != nil {
 		in, out := &in.Priority, &out.Priority
 		*out = new(float64)
@@ -448,11 +443,6 @@ func (in *HookParameters) DeepCopyInto(out *HookParameters) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Socket != nil {
-		in, out := &in.Socket, &out.Socket
-		*out = new(string)
-		**out = **in
-	}
 	if in.TimeoutMs != nil {
 		in, out := &in.TimeoutMs, &out.TimeoutMs
 		*out = new(float64)
@@ -460,11 +450,6 @@ func (in *HookParameters) DeepCopyInto(out *HookParameters) {
 	}
 	if in.User != nil {
 		in, out := &in.User, &out.User
-		*out = new(string)
-		**out = **in
-	}
-	if in.Webhook != nil {
-		in, out := &in.Webhook, &out.Webhook
 		*out = new(string)
 		**out = **in
 	}
@@ -556,8 +541,23 @@ func (in *VirtualKeyInitParameters) DeepCopyInto(out *VirtualKeyInitParameters) 
 			}
 		}
 	}
-	if in.BudgetPeriod != nil {
-		in, out := &in.BudgetPeriod, &out.BudgetPeriod
+	if in.Enabled != nil {
+		in, out := &in.Enabled, &out.Enabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.ExpiresAt != nil {
+		in, out := &in.ExpiresAt, &out.ExpiresAt
+		*out = new(float64)
+		**out = **in
+	}
+	if in.ExpiresIn != nil {
+		in, out := &in.ExpiresIn, &out.ExpiresIn
+		*out = new(string)
+		**out = **in
+	}
+	if in.Group != nil {
+		in, out := &in.Group, &out.Group
 		*out = new(string)
 		**out = **in
 	}
@@ -566,24 +566,30 @@ func (in *VirtualKeyInitParameters) DeepCopyInto(out *VirtualKeyInitParameters) 
 		*out = new(bool)
 		**out = **in
 	}
-	if in.MaxBudgetCents != nil {
-		in, out := &in.MaxBudgetCents, &out.MaxBudgetCents
-		*out = new(float64)
-		**out = **in
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]*string, len(*in))
+		for key, val := range *in {
+			var outVal *string
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				inVal := (*in)[key]
+				in, out := &inVal, &outVal
+				*out = new(string)
+				**out = **in
+			}
+			(*out)[key] = outVal
+		}
 	}
 	if in.Name != nil {
 		in, out := &in.Name, &out.Name
 		*out = new(string)
 		**out = **in
 	}
-	if in.RpmLimit != nil {
-		in, out := &in.RpmLimit, &out.RpmLimit
-		*out = new(float64)
-		**out = **in
-	}
-	if in.TpmLimit != nil {
-		in, out := &in.TpmLimit, &out.TpmLimit
-		*out = new(float64)
+	if in.Parent != nil {
+		in, out := &in.Parent, &out.Parent
+		*out = new(string)
 		**out = **in
 	}
 }
@@ -649,11 +655,6 @@ func (in *VirtualKeyObservation) DeepCopyInto(out *VirtualKeyObservation) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.BudgetPeriod != nil {
-		in, out := &in.BudgetPeriod, &out.BudgetPeriod
-		*out = new(string)
-		**out = **in
-	}
 	if in.CreatedAt != nil {
 		in, out := &in.CreatedAt, &out.CreatedAt
 		*out = new(float64)
@@ -661,6 +662,26 @@ func (in *VirtualKeyObservation) DeepCopyInto(out *VirtualKeyObservation) {
 	}
 	if in.Enabled != nil {
 		in, out := &in.Enabled, &out.Enabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.ExpiresAt != nil {
+		in, out := &in.ExpiresAt, &out.ExpiresAt
+		*out = new(float64)
+		**out = **in
+	}
+	if in.ExpiresIn != nil {
+		in, out := &in.ExpiresIn, &out.ExpiresIn
+		*out = new(string)
+		**out = **in
+	}
+	if in.Group != nil {
+		in, out := &in.Group, &out.Group
+		*out = new(string)
+		**out = **in
+	}
+	if in.GroupProvisioned != nil {
+		in, out := &in.GroupProvisioned, &out.GroupProvisioned
 		*out = new(bool)
 		**out = **in
 	}
@@ -674,24 +695,35 @@ func (in *VirtualKeyObservation) DeepCopyInto(out *VirtualKeyObservation) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.MaxBudgetCents != nil {
-		in, out := &in.MaxBudgetCents, &out.MaxBudgetCents
-		*out = new(float64)
-		**out = **in
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]*string, len(*in))
+		for key, val := range *in {
+			var outVal *string
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				inVal := (*in)[key]
+				in, out := &inVal, &outVal
+				*out = new(string)
+				**out = **in
+			}
+			(*out)[key] = outVal
+		}
 	}
 	if in.Name != nil {
 		in, out := &in.Name, &out.Name
 		*out = new(string)
 		**out = **in
 	}
-	if in.RpmLimit != nil {
-		in, out := &in.RpmLimit, &out.RpmLimit
-		*out = new(float64)
+	if in.Parent != nil {
+		in, out := &in.Parent, &out.Parent
+		*out = new(string)
 		**out = **in
 	}
-	if in.TpmLimit != nil {
-		in, out := &in.TpmLimit, &out.TpmLimit
-		*out = new(float64)
+	if in.State != nil {
+		in, out := &in.State, &out.State
+		*out = new(string)
 		**out = **in
 	}
 }
@@ -720,8 +752,23 @@ func (in *VirtualKeyParameters) DeepCopyInto(out *VirtualKeyParameters) {
 			}
 		}
 	}
-	if in.BudgetPeriod != nil {
-		in, out := &in.BudgetPeriod, &out.BudgetPeriod
+	if in.Enabled != nil {
+		in, out := &in.Enabled, &out.Enabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.ExpiresAt != nil {
+		in, out := &in.ExpiresAt, &out.ExpiresAt
+		*out = new(float64)
+		**out = **in
+	}
+	if in.ExpiresIn != nil {
+		in, out := &in.ExpiresIn, &out.ExpiresIn
+		*out = new(string)
+		**out = **in
+	}
+	if in.Group != nil {
+		in, out := &in.Group, &out.Group
 		*out = new(string)
 		**out = **in
 	}
@@ -730,24 +777,30 @@ func (in *VirtualKeyParameters) DeepCopyInto(out *VirtualKeyParameters) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.MaxBudgetCents != nil {
-		in, out := &in.MaxBudgetCents, &out.MaxBudgetCents
-		*out = new(float64)
-		**out = **in
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]*string, len(*in))
+		for key, val := range *in {
+			var outVal *string
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				inVal := (*in)[key]
+				in, out := &inVal, &outVal
+				*out = new(string)
+				**out = **in
+			}
+			(*out)[key] = outVal
+		}
 	}
 	if in.Name != nil {
 		in, out := &in.Name, &out.Name
 		*out = new(string)
 		**out = **in
 	}
-	if in.RpmLimit != nil {
-		in, out := &in.RpmLimit, &out.RpmLimit
-		*out = new(float64)
-		**out = **in
-	}
-	if in.TpmLimit != nil {
-		in, out := &in.TpmLimit, &out.TpmLimit
-		*out = new(float64)
+	if in.Parent != nil {
+		in, out := &in.Parent, &out.Parent
+		*out = new(string)
 		**out = **in
 	}
 }

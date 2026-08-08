@@ -10,8 +10,8 @@ spec:
   forProvider:
     allowedPools:
     - smart
-    budgetPeriod: daily
-    maxBudgetCents: 5000
+    expiresIn: 30d
+    group: team-checkout
+    labels:
+      service: checkout
     name: checkout-service
-    rpmLimit: 60
-    tpmLimit: 200000
