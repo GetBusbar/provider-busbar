@@ -11,9 +11,11 @@ export TERRAFORM_VERSION ?= 1.5.7
 TERRAFORM_VERSION_VALID := $(shell [ "$(TERRAFORM_VERSION)" = "`printf "$(TERRAFORM_VERSION)\n1.6" | sort -V | head -n1`" ] && echo 1 || echo 0)
 
 # The busbar Terraform provider (terraform-plugin-framework / protocol 6).
-# Registry source getbusbar/busbar (published on registry.terraform.io),
-# version 0.1.1 (tracks the busbar 1.5.0 admin API). The runtime pulls this
-# provider binary; the generation pipeline reads its schema (config/schema.json).
+# Registry source getbusbar/busbar (published on registry.terraform.io).
+# The runtime pulls this provider binary; the generation pipeline reads its
+# schema (config/schema.json). TERRAFORM_PROVIDER_VERSION below is this repo's
+# record of the upstream release it was last generated against, and is advanced
+# automatically by .github/workflows/release-on-upstream.yml.
 export TERRAFORM_PROVIDER_SOURCE ?= getbusbar/busbar
 export TERRAFORM_PROVIDER_REPO ?= https://github.com/GetBusbar/terraform-provider-busbar
 export TERRAFORM_PROVIDER_VERSION ?= 0.1.1
@@ -150,9 +152,33 @@ pull-docs:
 	fi
 	@git -C "$(WORK_DIR)/$(TERRAFORM_PROVIDER_SOURCE)" sparse-checkout set "$(TERRAFORM_DOCS_PATH)"
 
-generate.init: $(TERRAFORM_PROVIDER_SCHEMA) pull-docs
+# ====================================================================================
+# goimports
+#
+# upjet's code generator (cmd/generator -> upjet/pkg/pipeline) shells out to a BARE
+# `goimports` binary after writing each package, so goimports must exist on PATH before
+# `make generate` runs. Nothing in the crossplane build submodule installs it, which is
+# why every release-on-upstream run since 2026-08-03 died with
+#   panic: cannot run goimports for apis folder: bash: line 1: goimports: command not found
+# The exact version is already pinned in go.mod via the Go 1.24+ `tool` directive
+# (tool golang.org/x/tools/cmd/goimports), so install THAT version rather than @latest,
+# into the build submodule's usual host tools dir, and put that dir on PATH for every
+# recipe. This makes `make generate` self-sufficient on a clean machine and in CI alike,
+# instead of each workflow having to bolt on its own ad-hoc install.
+GOIMPORTS := $(TOOLS_HOST_DIR)/goimports
+export PATH := $(abspath $(TOOLS_HOST_DIR)):$(PATH)
 
-.PHONY: $(TERRAFORM_PROVIDER_SCHEMA) pull-docs check-terraform-version
+$(GOIMPORTS):
+	@$(INFO) installing goimports pinned by the go.mod tool directive
+	@mkdir -p $(TOOLS_HOST_DIR)
+	@GOFLAGS= GOBIN=$(abspath $(TOOLS_HOST_DIR)) $(GOHOST) install golang.org/x/tools/cmd/goimports || $(FAIL)
+	@$(OK) installing goimports
+
+goimports: $(GOIMPORTS)
+
+generate.init: $(TERRAFORM_PROVIDER_SCHEMA) pull-docs $(GOIMPORTS)
+
+.PHONY: $(TERRAFORM_PROVIDER_SCHEMA) pull-docs check-terraform-version goimports
 # ====================================================================================
 # Targets
 
