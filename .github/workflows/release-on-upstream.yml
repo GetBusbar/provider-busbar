@@ -4,12 +4,15 @@
 # TERRAFORM_PROVIDER_VERSION, and the build embeds that provider release's linux binary + generates
 # CRDs from its schema. That pin IS this repo's record of what it was last built against.
 #
-# The busbar-core upstream-release dispatch is only a WAKE signal here — this repo does not consume
+# The busbar-core upstream-release dispatch is only a WAKE signal here - this repo does not consume
 # busbar core directly. On any trigger this resolves terraform-provider-busbar's LATEST release and
-# only proceeds if it is newer than the current pin. That also fixes the fan-out ordering race: when
-# busbar core dispatches to the whole fleet at once, the terraform-provider release may not exist yet
-# — we simply no-op, and the daily cron (or the next dispatch) self-heals once it does. Runaway-safe:
-# an idle day, or an already-ingested provider release, is a no-op, never a spurious re-cut.
+# only proceeds if it is newer than the current pin. Runaway-safe: an idle day, or an
+# already-ingested provider release, is a no-op, never a spurious re-cut.
+#
+# FLEET FAN-OUT ORDERING: busbar core dispatches to the whole fleet at once, so on a dispatch the
+# terraform-provider release usually does not exist yet. A dispatch-triggered run therefore POLLS for
+# the sibling release for a bounded time and proceeds as soon as it appears; if it never appears the
+# run ends on a loud warning rather than a quiet green "nothing to do".
 #
 # On a real advance this re-pins TERRAFORM_PROVIDER_VERSION, `make generate`s the CRDs/examples,
 # bumps THIS repo's own v* tag, commits, and pushes the tag — which fires publish-provider-package.yml
@@ -47,6 +50,10 @@ env:
   # starting its own v0.1.0 line (mixed-model: wrappers keep independent semver, they do NOT mirror
   # busbar's version).
   SEED_VERSION: v0.1.0
+  # How long a repository_dispatch wake waits for terraform-provider-busbar's own release to show up
+  # before giving up (see the ordering-race note in the resolve step).
+  UPSTREAM_WAIT_SECONDS: "1200"
+  UPSTREAM_POLL_SECONDS: "30"
 
 jobs:
   cut:
@@ -80,20 +87,50 @@ jobs:
           set -euo pipefail
           cur_pin="$(awk -F'=' '/^export TERRAFORM_PROVIDER_VERSION[[:space:]]*\?=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' Makefile)"
           echo "current TERRAFORM_PROVIDER_VERSION pin: ${cur_pin:-<none>}"
+
           # Always resolve the upstream terraform-provider's LATEST release (the dispatch payload is
           # just a wake signal; our real dependency is the TF provider, not busbar core).
-          target_tag="$(gh api repos/GetBusbar/terraform-provider-busbar/releases/latest --jq .tag_name 2>/dev/null || true)"
-          target_ver="${target_tag#v}"
-          echo "terraform-provider-busbar latest release: ${target_tag:-none} (version ${target_ver:-none})"
+          latest_ver() {
+            local t
+            t="$(gh api repos/GetBusbar/terraform-provider-busbar/releases/latest --jq .tag_name 2>/dev/null || true)"
+            printf '%s' "${t#v}"
+          }
+          is_newer() { # is_newer <candidate> <current>  -> 0 when candidate > current
+            [ -n "$1" ] || return 1
+            [ "$1" != "$2" ] || return 1
+            [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | tail -1)" = "$1" ]
+          }
+
+          target_ver="$(latest_ver)"
+          echo "terraform-provider-busbar latest release: ${target_ver:-none}"
+
+          pin_stale=no
+          is_newer "$target_ver" "$cur_pin" && pin_stale=yes
+
+          # ORDERING RACE. GetBusbar/busbar's notify-downstream job wakes the whole fleet at once, but
+          # terraform-provider-busbar cuts its own release from that same fan-out, so on a dispatch
+          # the sibling release we depend on is routinely published minutes AFTER we are woken (for
+          # busbar 1.5.3 it was about five and a half minutes later). Resolving "latest" a single time
+          # and reporting a green "nothing to do" hides that. Wait for it, bounded, instead.
+          if [ "$EVENT_NAME" = repository_dispatch ] && [ "$pin_stale" = no ]; then
+            echo "::notice::dispatch-triggered and no newer terraform-provider yet -> waiting up to ${UPSTREAM_WAIT_SECONDS}s for the sibling release"
+            waited=0
+            while [ "$waited" -lt "$UPSTREAM_WAIT_SECONDS" ]; do
+              sleep "$UPSTREAM_POLL_SECONDS"
+              waited=$((waited + UPSTREAM_POLL_SECONDS))
+              probe="$(latest_ver)"
+              echo "  +${waited}s: latest=${probe:-none}"
+              if is_newer "$probe" "$cur_pin"; then
+                target_ver="$probe"
+                pin_stale=yes
+                echo "::notice::terraform-provider ${probe} appeared after ${waited}s of waiting -> proceeding"
+                break
+              fi
+            done
+          fi
 
           force=no
           [ "$EVENT_NAME" = workflow_dispatch ] && force=yes
-
-          pin_stale=no
-          if [ -n "$target_ver" ] && [ "$target_ver" != "$cur_pin" ]; then
-            newest="$(printf '%s\n%s\n' "$cur_pin" "$target_ver" | sort -V | tail -1)"
-            [ "$newest" = "$target_ver" ] && pin_stale=yes
-          fi
 
           should_cut=no
           if [ "$force" = yes ]; then
@@ -102,6 +139,11 @@ jobs:
           elif [ "$pin_stale" = yes ]; then
             should_cut=yes
             echo "::notice::terraform-provider advanced (pinned=${cur_pin} -> ${target_ver}) -> cutting a release"
+          elif [ "$EVENT_NAME" = repository_dispatch ]; then
+            # An upstream-release dispatch that still ends in "nothing to do" after waiting means the
+            # fan-out fired too early or the sibling release failed. Do not report that as a quiet
+            # green; the daily cron still self-heals, but this has to be visible in the run list.
+            echo "::warning title=upstream-release dispatch produced no release::woken by an upstream-release dispatch but terraform-provider-busbar is still at ${target_ver:-none} (pin ${cur_pin:-none}) after waiting ${UPSTREAM_WAIT_SECONDS}s. Either the sibling release failed or the fan-out fired too early. This repo is NOT refreshed; the daily cron will retry."
           else
             echo "::notice::no newer terraform-provider (pinned=${cur_pin:-none}, latest=${target_ver:-none}) -> nothing to do"
           fi
