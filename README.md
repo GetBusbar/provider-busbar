@@ -42,8 +42,27 @@ this build was generated from.
 
 ## Install
 
+The package is published to GHCR. Latest is
+`ghcr.io/getbusbar/provider-busbar:v0.1.1`, built against
+`terraform-provider-busbar` v0.2.3 (busbar 1.5.3). `:latest` points at the same
+image. The package is currently built for **linux/amd64 only**, so it needs an
+amd64 node.
+
+Apply it as a Crossplane `Provider`:
+
+```yaml
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-busbar
+spec:
+  package: ghcr.io/getbusbar/provider-busbar:v0.1.1
+```
+
+Or with the Crossplane CLI:
+
 ```bash
-kubectl crossplane install provider ghcr.io/getbusbar/provider-busbar:v0.1.0
+crossplane xpkg install provider ghcr.io/getbusbar/provider-busbar:v0.1.1
 ```
 
 Then create a `ProviderConfig` referencing a `Secret` with your busbar admin
@@ -78,13 +97,19 @@ make run              # run the provider out-of-cluster
 
 Regenerating the schema (when the upstream provider changes) is automatic:
 `make generate` downloads the pinned `terraform-provider-busbar` release
-(`TERRAFORM_PROVIDER_VERSION` in the `Makefile`, currently **v0.1.1**, which
-tracks the busbar 1.5.0 admin API) from GitHub into a local Terraform
+(`TERRAFORM_PROVIDER_VERSION` in the `Makefile`) from GitHub into a local Terraform
 filesystem mirror and runs `terraform providers schema -json` against it to
 refresh `config/schema.json`. A filesystem mirror is used instead of the
 public registry because Terraform 1.5.x cannot verify the Ed25519 GPG key the
 registry release is signed with. To move to a newer upstream provider, bump
-`TERRAFORM_PROVIDER_VERSION` and re-run `make generate`.
+`TERRAFORM_PROVIDER_VERSION` and re-run `make generate`. Note that `make
+generate` needs `goimports`, which upjet's generator shells out to by name; the
+Makefile installs the go.mod-pinned version into `.cache/tools/<platform>` and
+puts it on PATH, so no manual setup is required.
+
+The `release-on-upstream` workflow does this automatically when a new
+`terraform-provider-busbar` release appears: it re-pins, regenerates, commits,
+and pushes this repo's next `v*` tag, which fires the package publish.
 
 ## CI status (honest)
 
