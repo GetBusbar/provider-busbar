@@ -52,8 +52,8 @@ type HookInitParameters struct {
 	// Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	Prompt *string `json:"prompt,omitempty" tf:"prompt,omitempty"`
 
-	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
-	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
+	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
 	Settings *string `json:"settings,omitempty" tf:"settings,omitempty"`
 
 	// call timeout in milliseconds. Defaults to 1.
@@ -105,8 +105,8 @@ type HookObservation struct {
 	// Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	Prompt *string `json:"prompt,omitempty" tf:"prompt,omitempty"`
 
-	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
-	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
+	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
 	Settings *string `json:"settings,omitempty" tf:"settings,omitempty"`
 
 	// call timeout in milliseconds. Defaults to 1.
@@ -165,8 +165,8 @@ type HookParameters struct {
 	// +kubebuilder:validation:Optional
 	Prompt *string `json:"prompt,omitempty" tf:"prompt,omitempty"`
 
-	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
-	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
+	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
 	// +kubebuilder:validation:Optional
 	Settings *string `json:"settings,omitempty" tf:"settings,omitempty"`
 

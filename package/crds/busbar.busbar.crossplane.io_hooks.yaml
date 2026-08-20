@@ -123,8 +123,8 @@ spec:
                     type: string
                   settings:
                     description: |-
-                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
-                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
                     type: string
                   timeoutMs:
                     description: |-
@@ -197,8 +197,8 @@ spec:
                     type: string
                   settings:
                     description: |-
-                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
-                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
                     type: string
                   timeoutMs:
                     description: |-
@@ -360,8 +360,8 @@ spec:
                     type: string
                   settings:
                     description: |-
-                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
-                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
                     type: string
                   timeoutMs:
                     description: |-
