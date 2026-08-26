@@ -1,0 +1,17 @@
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+comment: false
+
+ignore:
+  - "**/*_test.go"
+  - "**/zz_generated*.go"
+  - "**/generated.pb.go"
+  - "apis/**/zz_*.go"
+  - "examples/**"

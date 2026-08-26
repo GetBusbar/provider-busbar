@@ -1,5 +1,7 @@
 # provider-busbar
 
+[![codecov](https://codecov.io/gh/GetBusbar/provider-busbar/branch/dev/graph/badge.svg)](https://codecov.io/gh/GetBusbar/provider-busbar)
+
 A [Crossplane](https://crossplane.io) provider for **busbar**, the LLM gateway
 admin API, generated with [Upjet](https://github.com/crossplane/upjet) from the
 [`getbusbar/busbar`](https://github.com/GetBusbar/terraform-provider-busbar)
