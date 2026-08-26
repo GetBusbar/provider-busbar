@@ -1,5 +1,9 @@
 # provider-busbar
 
+[![CI](https://github.com/GetBusbar/provider-busbar/actions/workflows/ci.yml/badge.svg)](https://github.com/GetBusbar/provider-busbar/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/GetBusbar/provider-busbar/branch/main/graph/badge.svg)](https://codecov.io/gh/GetBusbar/provider-busbar)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 A [Crossplane](https://crossplane.io) provider for **busbar**, the LLM gateway
 admin API, generated with [Upjet](https://github.com/crossplane/upjet) from the
 [`getbusbar/busbar`](https://github.com/GetBusbar/terraform-provider-busbar)
