@@ -12,10 +12,10 @@ require (
 	github.com/crossplane/upjet/v2 v2.2.1-0.20260414070754-c6d5213346ac
 	github.com/pkg/errors v0.9.1
 	google.golang.org/grpc v1.79.3
-	k8s.io/api v0.35.3
+	k8s.io/api v0.37.1
 	k8s.io/apiextensions-apiserver v0.35.3
 	k8s.io/apimachinery v0.37.1
-	k8s.io/client-go v0.35.3
+	k8s.io/client-go v0.37.1
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/controller-tools v0.20.1
 )
@@ -118,7 +118,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57 // indirect
