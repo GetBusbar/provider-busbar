@@ -11,8 +11,11 @@ on:
 env:
   GO_VERSION: "1.24"
 
+permissions: {}
 jobs:
   check-permissions:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     outputs:
       permission: ${{ steps.check-permissions.outputs.permission }}
@@ -36,6 +39,10 @@ jobs:
           echo "permission=$GRANTED" >> "$GITHUB_OUTPUT"
 
   get-example-list:
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
     needs: check-permissions
     if: ${{ (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
     runs-on: ubuntu-latest
@@ -94,6 +101,10 @@ jobs:
             -f context="Uptest-${{ steps.get-example-list-name.outputs.example-hash }}"
 
   uptest:
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
     needs:
       - check-permissions
       - get-example-list
