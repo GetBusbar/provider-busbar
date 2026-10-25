@@ -1,0 +1,41 @@
+# Imported from .github/workflows/ci.yml by `modernci import github`.
+to: dev
+on:
+  move:
+  - build
+  - coverage
+  push:
+  - build
+  - coverage
+  landed:
+  - build
+  - coverage
+  manual:
+  - build
+  - coverage
+checks:
+  build:
+    run: |
+      set -e
+      git submodule update --init --recursive </dev/null
+      # Build
+      go build ./... </dev/null
+      # Vet
+      go vet ./... </dev/null
+      # Test
+      ( bash -e /dev/fd/3 3<<'MODERNCI_STEP' </dev/null
+      go test ./... 2>&1 | tail -40
+      MODERNCI_STEP
+      )
+    requires:
+    - go
+  coverage:
+    run: |
+      set -e
+      git submodule update --init --recursive </dev/null
+      # Test with coverage
+      go test ./... -covermode=atomic -coverprofile=coverage.out </dev/null
+    requires:
+    - go
+env:
+  CI: 'true'
