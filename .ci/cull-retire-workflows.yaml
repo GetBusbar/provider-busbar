@@ -1,4 +1,4 @@
-# Imported from .github/workflows/ci.yml by .
+# Imported from .github/workflows/ci.yml by `modernci import github`.
 to: main
 on:
   move:
