@@ -9,41 +9,13 @@ on:
     types: [created]
 
 env:
-  GO_VERSION: "1.26"
+  GO_VERSION: "1.24"
 
+permissions: {}
 jobs:
-  # E2E needs repo secrets that are NOT provisioned yet (see README,
-  # "End-to-end tests"). Rather than letting the pipeline start and fail (or
-  # silently pretend coverage), this job checks secret presence and makes the
-  # downstream jobs skip with a loud notice until the secrets are armed.
-  check-secrets:
-    runs-on: ubuntu-latest
-    env:
-      HAS_UPTEST_CLOUD_CREDENTIALS: ${{ secrets.UPTEST_CLOUD_CREDENTIALS != '' }}
-      HAS_UPTEST_DATASOURCE: ${{ secrets.UPTEST_DATASOURCE != '' }}
-    outputs:
-      armed: ${{ steps.gate.outputs.armed }}
-    steps:
-      - name: Check e2e secret provisioning
-        id: gate
-        run: |
-          armed=true
-          if [ "$HAS_UPTEST_CLOUD_CREDENTIALS" != "true" ]; then
-            echo "::warning title=e2e SKIPPED::SKIPPED: secret UPTEST_CLOUD_CREDENTIALS not provisioned on this repository. End-to-end tests cannot run until it is added (busbar admin credentials JSON; see README 'End-to-end tests')."
-            armed=false
-          fi
-          if [ "$HAS_UPTEST_DATASOURCE" != "true" ]; then
-            echo "::warning title=e2e SKIPPED::SKIPPED: secret UPTEST_DATASOURCE not provisioned on this repository. End-to-end tests cannot run until it is added (uptest datasource YAML; see README 'End-to-end tests')."
-            armed=false
-          fi
-          echo "armed=$armed" >> "$GITHUB_OUTPUT"
-          if [ "$armed" = "true" ]; then
-            echo "All e2e secrets provisioned; downstream jobs will run."
-          else
-            echo "E2E SKIPPED: required secrets missing; downstream jobs will not run."
-          fi
-
   check-permissions:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     outputs:
       permission: ${{ steps.check-permissions.outputs.permission }}
@@ -67,50 +39,62 @@ jobs:
           echo "permission=$GRANTED" >> "$GITHUB_OUTPUT"
 
   get-example-list:
-    needs:
-      - check-secrets
-      - check-permissions
-    if: ${{ needs.check-secrets.outputs.armed == 'true' && (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    needs: check-permissions
+    if: ${{ (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
     runs-on: ubuntu-latest
     outputs:
       example_list: ${{ steps.get-example-list-name.outputs.example-list }}
       example_hash: ${{ steps.get-example-list-name.outputs.example-hash }}
+      commit_sha: ${{ steps.request.outputs.commit-sha }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
 
-      - name: Checkout PR
-        id: checkout-pr
+      - name: Validate immutable approval
+        id: request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr checkout ${{ github.event.issue.number }}
-          git submodule update --init --recursive
-          OUTPUT=$(git log -1 --format='%H')
-          echo "commit-sha=$OUTPUT" >> $GITHUB_OUTPUT
+          COMMENT: ${{ github.event.comment.body }}
+        run: python3 scripts/e2e_request.py
 
+      - name: Checkout approved commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.request.outputs.commit-sha }}
+          submodules: true
+          persist-credentials: false
 
       - name: Prepare The Example List
         env:
-          COMMENT: ${{ github.event.comment.body }}
+          REQUESTED_PATHS: ${{ steps.request.outputs.requested-paths }}
         id: get-example-list-name
         run: |
-          PATHS=$(echo $COMMENT | sed 's/^.*\/test-examples="//g' | cut -d '"' -f 1 | sed 's/,/ /g')
-          EXAMPLE_LIST=""
-          for P in $PATHS; do EXAMPLE_LIST="${EXAMPLE_LIST},$(find $P -name '*.yaml' | tr '\n' ',')"; done
-
-          sudo apt-get -y install coreutils
-          COUNT=$(echo ${EXAMPLE_LIST:1} | grep -o ".yaml" | wc -l)
-          if [ $COUNT -gt 1 ]; then EXAMPLE_HASH=$(echo ${EXAMPLE_LIST} | md5sum | cut -f1 -d" "); else EXAMPLE_HASH=$(echo ${EXAMPLE_LIST:1} | sed 's/.$//'); fi
-
-          echo "Examples: ${EXAMPLE_LIST:1}"
-          echo "Example Hash: ${EXAMPLE_HASH}"
-
-          echo "example-list=${EXAMPLE_LIST:1}" >> $GITHUB_OUTPUT
-          echo "example-hash=${EXAMPLE_HASH}" >> $GITHUB_OUTPUT
+          python3 - <<'PYTHON'
+          import hashlib
+          import os
+          from pathlib import Path
+          files = []
+          for requested in os.environ['REQUESTED_PATHS'].split(','):
+              path = Path(requested)
+              matches = [path] if path.is_file() else sorted(path.rglob('*.yaml'))
+              if not matches:
+                  raise SystemExit('No examples found for requested path')
+              for match in matches:
+                  value = match.as_posix()
+                  if match.suffix != '.yaml' or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-' for c in value):
+                      raise SystemExit('Invalid example filename')
+                  files.append(value)
+          examples = ','.join(sorted(set(files)))
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('example-list=' + examples + '\n')
+              output.write('example-hash=' + hashlib.sha256(examples.encode()).hexdigest() + '\n')
+          PYTHON
 
 
       - name: Create Pending Status Check
@@ -120,52 +104,46 @@ jobs:
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/statuses/${{ steps.checkout-pr.outputs.commit-sha }} \
+            /repos/${{ github.repository }}/statuses/${{ steps.request.outputs.commit-sha }} \
             -f state='pending' \
             -f target_url='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
             -f description='Running...' \
             -f context="Uptest-${{ steps.get-example-list-name.outputs.example-hash }}"
 
   uptest:
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
     needs:
-      - check-secrets
       - check-permissions
       - get-example-list
-    if: ${{ needs.check-secrets.outputs.armed == 'true' && (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
+    if: ${{ (needs.check-permissions.outputs.permission == 'admin' || needs.check-permissions.outputs.permission == 'write') && github.event.issue.pull_request != null && contains(github.event.comment.body, '/test-examples')}}
     runs-on: ubuntu-latest
 
     steps:
       - name: Cleanup Disk
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        uses: jlumbroso/free-disk-space@ceedf095f4ec1a097402bc6bd80831f2e1a6fde6 # v2.0.0
         with:
           large-packages: false
           swap-storage: false
 
       - name: Setup QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
         with:
           platforms: all
 
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout approved commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.get-example-list.outputs.commit_sha }}
           submodules: true
+          persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
-
-      - name: Checkout PR
-        id: checkout-pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr checkout ${{ github.event.issue.number }}
-          git submodule update --init --recursive
-          OUTPUT=$(git log -1 --format='%H')
-          echo "commit-sha=$OUTPUT" >> $GITHUB_OUTPUT
-
 
       - name: Vendor Dependencies
         run: make vendor vendor.check
@@ -178,8 +156,10 @@ jobs:
           UPTEST_TEST_DIR: ./_output/controlplane-dump
           UPTEST_DATASOURCE_PATH: .work/uptest-datasource.yaml
           UPTEST_UPDATE_PARAMETER: ""
+          UPTEST_DATASOURCE: ${{ secrets.UPTEST_DATASOURCE }}
         run: |
-          mkdir -p .work && echo "${{ secrets.UPTEST_DATASOURCE }}" > .work/uptest-datasource.yaml
+          mkdir -p .work
+          printf '%s\n' "$UPTEST_DATASOURCE" > .work/uptest-datasource.yaml
           make e2e
 
 
@@ -191,7 +171,7 @@ jobs:
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/statuses/${{ steps.checkout-pr.outputs.commit-sha }} \
+            /repos/${{ github.repository }}/statuses/${{ needs.get-example-list.outputs.commit_sha }} \
             -f state='success' \
             -f target_url='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
             -f description='Passed' \
@@ -206,7 +186,7 @@ jobs:
 
       - name: Upload Cluster Dump
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: controlplane-dump
           path: ./_output/controlplane-dump
@@ -214,7 +194,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          eval $(make --no-print-directory build.vars)
+          eval "$(make --no-print-directory build.vars)"
           ${KUBECTL} delete managed --all || true
 
 
@@ -227,7 +207,7 @@ jobs:
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/statuses/${{ steps.checkout-pr.outputs.commit-sha }} \
+            /repos/${{ github.repository }}/statuses/${{ needs.get-example-list.outputs.commit_sha }} \
             -f state='failure' \
             -f target_url='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
             -f description='Failed' \
