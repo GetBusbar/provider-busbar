@@ -4,10 +4,10 @@ metadata:
   name: pii-redactor
 spec:
   forProvider:
-    name: pii-redactor
-    kind: prompt
-    at: pre
+    kind: gate
+    at: request
     priority: 100
-    prompt: "Redact any personally identifiable information from the following."
+    prompt: rw
+    webhook: https://pii-redactor.example.com/hook
   providerConfigRef:
     name: default

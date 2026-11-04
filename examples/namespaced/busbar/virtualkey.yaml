@@ -14,4 +14,5 @@ spec:
     tpmLimit: 200000
     issueAwsCredential: false
   providerConfigRef:
+    kind: ClusterProviderConfig
     name: default

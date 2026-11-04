@@ -19,7 +19,6 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/statemetrics"
 	tjcontroller "github.com/crossplane/upjet/v2/pkg/controller"
-	"github.com/crossplane/upjet/v2/pkg/terraform"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	authv1 "k8s.io/api/authorization/v1"
@@ -53,7 +52,7 @@ const (
 
 func main() {
 	var (
-		app                     = kingpin.New(filepath.Base(os.Args[0]), "Terraform based Crossplane provider for Template").DefaultEnvars()
+		app                     = kingpin.New(filepath.Base(os.Args[0]), "Terraform based Crossplane provider for busbar").DefaultEnvars()
 		debug                   = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
 		syncPeriod              = app.Flag("sync", "Controller manager sync period such as 300ms, 1.5h, or 2h45m").Short('s').Default("1h").Duration()
 		pollInterval            = app.Flag("poll", "Poll interval controls how often an individual resource should be checked for drift.").Default("10m").Duration()
@@ -82,6 +81,7 @@ func main() {
 	)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
+	kingpin.FatalIfError(validateMetricInterval(*pollStateMetricInterval), "Invalid command-line options")
 
 	zl := zap.New(zap.UseDevMode(*debug))
 	log := logging.NewLogrLogger(zl.WithName("provider-busbar"))
@@ -138,8 +138,8 @@ func main() {
 		RenewDeadline:              func() *time.Duration { d := 50 * time.Second; return &d }(),
 	})
 	kingpin.FatalIfError(err, "Cannot create controller manager")
-	kingpin.FatalIfError(apisCluster.AddToScheme(mgr.GetScheme()), "Cannot add cluster-scoped Template APIs to scheme")
-	kingpin.FatalIfError(apisNamespaced.AddToScheme(mgr.GetScheme()), "Cannot add namespaced Template APIs to scheme")
+	kingpin.FatalIfError(apisCluster.AddToScheme(mgr.GetScheme()), "Cannot add cluster-scoped busbar APIs to scheme")
+	kingpin.FatalIfError(apisNamespaced.AddToScheme(mgr.GetScheme()), "Cannot add namespaced busbar APIs to scheme")
 	kingpin.FatalIfError(apiextensionsv1.AddToScheme(mgr.GetScheme()), "Cannot add api-extensions APIs to scheme")
 	kingpin.FatalIfError(authv1.AddToScheme(mgr.GetScheme()), "Cannot add k8s authorization APIs to scheme")
 
@@ -149,13 +149,15 @@ func main() {
 	metrics.Registry.MustRegister(metricRecorder)
 	metrics.Registry.MustRegister(stateMetrics)
 
+	clusterFeatures := &feature.Flags{}
+	namespacedFeatures := &feature.Flags{}
 	clusterOpts := tjcontroller.Options{
 		Options: xpcontroller.Options{
 			Logger:                  log,
 			GlobalRateLimiter:       ratelimiter.NewGlobal(*maxReconcileRate),
 			PollInterval:            *pollInterval,
 			MaxConcurrentReconciles: *maxReconcileRate,
-			Features:                &feature.Flags{},
+			Features:                clusterFeatures,
 			MetricOptions: &xpcontroller.MetricOptions{
 				PollStateMetricInterval: *pollStateMetricInterval,
 				MRMetrics:               metricRecorder,
@@ -165,7 +167,7 @@ func main() {
 		Provider: config.GetProvider(),
 		// use the following WorkspaceStoreOption to enable the shared gRPC mode
 		// terraform.WithProviderRunner(terraform.NewSharedProvider(log, os.Getenv("TERRAFORM_NATIVE_PROVIDER_PATH"), terraform.WithNativeProviderArgs("-debuggable")))
-		WorkspaceStore: terraform.NewWorkspaceStore(log),
+		WorkspaceStore: newWorkspaceStore(log, clusterFeatures),
 		SetupFn:        clients.TerraformSetupBuilder(*terraformVersion, *providerSource, *providerVersion),
 		StartWebhooks:  *certsDir != "",
 	}
@@ -176,7 +178,7 @@ func main() {
 			GlobalRateLimiter:       ratelimiter.NewGlobal(*maxReconcileRate),
 			PollInterval:            *pollInterval,
 			MaxConcurrentReconciles: *maxReconcileRate,
-			Features:                &feature.Flags{},
+			Features:                namespacedFeatures,
 			MetricOptions: &xpcontroller.MetricOptions{
 				PollStateMetricInterval: *pollStateMetricInterval,
 				MRMetrics:               metricRecorder,
@@ -186,7 +188,7 @@ func main() {
 		Provider: config.GetProviderNamespaced(),
 		// use the following WorkspaceStoreOption to enable the shared gRPC mode
 		// terraform.WithProviderRunner(terraform.NewSharedProvider(log, os.Getenv("TERRAFORM_NATIVE_PROVIDER_PATH"), terraform.WithNativeProviderArgs("-debuggable")))
-		WorkspaceStore: terraform.NewWorkspaceStore(log),
+		WorkspaceStore: newWorkspaceStore(log, namespacedFeatures),
 		SetupFn:        clients.TerraformSetupBuilder(*terraformVersion, *providerSource, *providerVersion),
 		StartWebhooks:  *certsDir != "",
 	}
@@ -208,7 +210,7 @@ func main() {
 		clo := xpcontroller.ChangeLogOptions{
 			ChangeLogger: managed.NewGRPCChangeLogger(
 				changelogsv1alpha1.NewChangeLogServiceClient(conn),
-				managed.WithProviderVersion(fmt.Sprintf("provider-upjet-aws:%s", version.Version))),
+				managed.WithProviderVersion(fmt.Sprintf("provider-busbar:%s", version.Version))),
 		}
 		clusterOpts.ChangeLogOptions = &clo
 		namespacedOpts.ChangeLogOptions = &clo
@@ -225,12 +227,12 @@ func main() {
 			Gate:                    crdGate,
 			MaxConcurrentReconciles: 1,
 		}), "Cannot setup CRD gate")
-		kingpin.FatalIfError(controllerCluster.SetupGated(mgr, clusterOpts), "Cannot setup cluster-scoped Template controllers")
-		kingpin.FatalIfError(controllerNamespaced.SetupGated(mgr, namespacedOpts), "Cannot setup namespaced Template controllers")
+		kingpin.FatalIfError(controllerCluster.SetupGated(mgr, clusterOpts), "Cannot setup cluster-scoped busbar controllers")
+		kingpin.FatalIfError(controllerNamespaced.SetupGated(mgr, namespacedOpts), "Cannot setup namespaced busbar controllers")
 	} else {
 		log.Info("Provider has missing RBAC permissions for watching CRDs, controller SafeStart capability will be disabled")
-		kingpin.FatalIfError(controllerCluster.Setup(mgr, clusterOpts), "Cannot setup cluster-scoped Template controllers")
-		kingpin.FatalIfError(controllerNamespaced.Setup(mgr, namespacedOpts), "Cannot setup namespaced Template controllers")
+		kingpin.FatalIfError(controllerCluster.Setup(mgr, clusterOpts), "Cannot setup cluster-scoped busbar controllers")
+		kingpin.FatalIfError(controllerNamespaced.Setup(mgr, namespacedOpts), "Cannot setup namespaced busbar controllers")
 	}
 
 	kingpin.FatalIfError(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
@@ -252,7 +254,7 @@ func canWatchCRD(ctx context.Context, mgr manager.Manager) (bool, error) {
 			},
 		}
 		if err := mgr.GetClient().Create(ctx, sar); err != nil {
-			return false, errors.Wrapf(err, "unable to perform RBAC check for verb %s on CustomResourceDefinitions", verbs)
+			return false, errors.Wrapf(err, "unable to perform RBAC check for verb %s on CustomResourceDefinitions", verb)
 		}
 		if !sar.Status.Allowed {
 			return false, nil

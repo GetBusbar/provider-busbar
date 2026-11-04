@@ -16,169 +16,143 @@ import (
 
 type HookInitParameters struct {
 
-	// (String) Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
 	// Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
 	At *string `json:"at,omitempty" tf:"at,omitempty"`
 
-	// only (not echoed by reads).
 	// Whether this hook is the default for its stage. Write-only (not echoed by reads).
 	Default *bool `json:"default,omitempty" tf:"default,omitempty"`
 
-	// (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
 	// Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
 	Global *bool `json:"global,omitempty" tf:"global,omitempty"`
 
-	// and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
 	// Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
 	Kind *string `json:"kind,omitempty" tf:"kind,omitempty"`
 
-	// only (not echoed by reads).
 	// Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Write-only (not echoed by reads).
 	OnEmpty *string `json:"onEmpty,omitempty" tf:"on_empty,omitempty"`
 
-	// (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
 	// Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
 	OnError *string `json:"onError,omitempty" tf:"on_error,omitempty"`
 
-	// in plugin such as ranking).
-	// The signed `kind: hook` plugin this hook dispatches to (its NAME from the gateway's plugin catalog, e.g. a compiled-in plugin such as `ranking`).
-	Plugin *string `json:"plugin,omitempty" tf:"plugin,omitempty"`
-
-	// (Number) Ordering priority within a stage. Defaults to 0.
 	// Ordering priority within a stage. Defaults to 0.
 	Priority *float64 `json:"priority,omitempty" tf:"priority,omitempty"`
 
-	// content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	// Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	Prompt *string `json:"prompt,omitempty" tf:"prompt,omitempty"`
 
-	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
-	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
+	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
 	Settings *string `json:"settings,omitempty" tf:"settings,omitempty"`
 
-	// call timeout in milliseconds. Defaults to 1.
+	// Unix socket path to the hook process. Exactly one of socket or webhook.
+	Socket *string `json:"socket,omitempty" tf:"socket,omitempty"`
+
 	// Per-call timeout in milliseconds. Defaults to 1.
 	TimeoutMs *float64 `json:"timeoutMs,omitempty" tf:"timeout_ms,omitempty"`
 
-	// identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
 	// Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
 	User *string `json:"user,omitempty" tf:"user,omitempty"`
+
+	// Webhook URL for the hook. Exactly one of socket or webhook.
+	Webhook *string `json:"webhook,omitempty" tf:"webhook,omitempty"`
 }
 
 type HookObservation struct {
 
-	// (String) Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
 	// Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
 	At *string `json:"at,omitempty" tf:"at,omitempty"`
 
-	// only (not echoed by reads).
 	// Whether this hook is the default for its stage. Write-only (not echoed by reads).
 	Default *bool `json:"default,omitempty" tf:"default,omitempty"`
 
-	// (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
 	// Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
 	Global *bool `json:"global,omitempty" tf:"global,omitempty"`
 
 	ID *string `json:"id,omitempty" tf:"id,omitempty"`
 
-	// and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
 	// Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
 	Kind *string `json:"kind,omitempty" tf:"kind,omitempty"`
 
-	// only (not echoed by reads).
 	// Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Write-only (not echoed by reads).
 	OnEmpty *string `json:"onEmpty,omitempty" tf:"on_empty,omitempty"`
 
-	// (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
 	// Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
 	OnError *string `json:"onError,omitempty" tf:"on_error,omitempty"`
 
-	// in plugin such as ranking).
-	// The signed `kind: hook` plugin this hook dispatches to (its NAME from the gateway's plugin catalog, e.g. a compiled-in plugin such as `ranking`).
-	Plugin *string `json:"plugin,omitempty" tf:"plugin,omitempty"`
-
-	// (Number) Ordering priority within a stage. Defaults to 0.
 	// Ordering priority within a stage. Defaults to 0.
 	Priority *float64 `json:"priority,omitempty" tf:"priority,omitempty"`
 
-	// content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	// Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	Prompt *string `json:"prompt,omitempty" tf:"prompt,omitempty"`
 
-	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
-	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
+	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
 	Settings *string `json:"settings,omitempty" tf:"settings,omitempty"`
 
-	// call timeout in milliseconds. Defaults to 1.
+	// Unix socket path to the hook process. Exactly one of socket or webhook.
+	Socket *string `json:"socket,omitempty" tf:"socket,omitempty"`
+
 	// Per-call timeout in milliseconds. Defaults to 1.
 	TimeoutMs *float64 `json:"timeoutMs,omitempty" tf:"timeout_ms,omitempty"`
 
-	// identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
 	// Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
 	User *string `json:"user,omitempty" tf:"user,omitempty"`
+
+	// Webhook URL for the hook. Exactly one of socket or webhook.
+	Webhook *string `json:"webhook,omitempty" tf:"webhook,omitempty"`
 }
 
 type HookParameters struct {
 
-	// (String) Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
 	// Pipeline stage: request, route, attempt, or completion. Null lets busbar place it by kind.
 	// +kubebuilder:validation:Optional
 	At *string `json:"at,omitempty" tf:"at,omitempty"`
 
-	// only (not echoed by reads).
 	// Whether this hook is the default for its stage. Write-only (not echoed by reads).
 	// +kubebuilder:validation:Optional
 	Default *bool `json:"default,omitempty" tf:"default,omitempty"`
 
-	// (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
 	// Whether the hook applies globally (all pools). Defaults to false. May read back true if wired via global_hooks.
 	// +kubebuilder:validation:Optional
 	Global *bool `json:"global,omitempty" tf:"global,omitempty"`
 
-	// and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
 	// Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
 	// +kubebuilder:validation:Optional
 	Kind *string `json:"kind,omitempty" tf:"kind,omitempty"`
 
-	// only (not echoed by reads).
 	// Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Write-only (not echoed by reads).
 	// +kubebuilder:validation:Optional
 	OnEmpty *string `json:"onEmpty,omitempty" tf:"on_empty,omitempty"`
 
-	// (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
 	// Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
 	// +kubebuilder:validation:Optional
 	OnError *string `json:"onError,omitempty" tf:"on_error,omitempty"`
 
-	// in plugin such as ranking).
-	// The signed `kind: hook` plugin this hook dispatches to (its NAME from the gateway's plugin catalog, e.g. a compiled-in plugin such as `ranking`).
-	// +kubebuilder:validation:Optional
-	Plugin *string `json:"plugin,omitempty" tf:"plugin,omitempty"`
-
-	// (Number) Ordering priority within a stage. Defaults to 0.
 	// Ordering priority within a stage. Defaults to 0.
 	// +kubebuilder:validation:Optional
 	Priority *float64 `json:"priority,omitempty" tf:"priority,omitempty"`
 
-	// content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	// Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
 	// +kubebuilder:validation:Optional
 	Prompt *string `json:"prompt,omitempty" tf:"prompt,omitempty"`
 
-	// hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as settings_keys); the provider keeps the last value it applied and detects drift by key names.
-	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}. The bag may carry SecretRefs, so busbar redacts it on every read (only the key names are echoed, as `settings_keys`); the provider keeps the last value it applied and detects drift by key names.
+	// Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
 	// +kubebuilder:validation:Optional
 	Settings *string `json:"settings,omitempty" tf:"settings,omitempty"`
 
-	// call timeout in milliseconds. Defaults to 1.
+	// Unix socket path to the hook process. Exactly one of socket or webhook.
+	// +kubebuilder:validation:Optional
+	Socket *string `json:"socket,omitempty" tf:"socket,omitempty"`
+
 	// Per-call timeout in milliseconds. Defaults to 1.
 	// +kubebuilder:validation:Optional
 	TimeoutMs *float64 `json:"timeoutMs,omitempty" tf:"timeout_ms,omitempty"`
 
-	// identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
 	// Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
 	// +kubebuilder:validation:Optional
 	User *string `json:"user,omitempty" tf:"user,omitempty"`
+
+	// Webhook URL for the hook. Exactly one of socket or webhook.
+	// +kubebuilder:validation:Optional
+	Webhook *string `json:"webhook,omitempty" tf:"webhook,omitempty"`
 }
 
 // HookSpec defines the desired state of Hook
@@ -208,7 +182,7 @@ type HookStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
-// Hook is the Schema for the Hooks API. A routing hook (busbar >= 1.5.0): a tap or gate backed by a signed kind: hook plugin, wired into busbar's request/ranking pipeline (POST/GET/PUT/DELETE /api/v1/admin/hooks). The grant fields (kind, prompt, user) are immutable once registered — changing them replaces the hook.
+// Hook is the Schema for the Hooks API. <no value>
 // +kubebuilder:printcolumn:name="SYNCED",type="string",JSONPath=".status.conditions[?(@.type=='Synced')].status"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="EXTERNAL-NAME",type="string",JSONPath=".metadata.annotations.crossplane\\.io/external-name"
@@ -218,7 +192,6 @@ type Hook struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.kind) || (has(self.initProvider) && has(self.initProvider.kind))",message="spec.forProvider.kind is a required parameter"
-	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.plugin) || (has(self.initProvider) && has(self.initProvider.plugin))",message="spec.forProvider.plugin is a required parameter"
 	Spec   HookSpec   `json:"spec"`
 	Status HookStatus `json:"status,omitempty"`
 }

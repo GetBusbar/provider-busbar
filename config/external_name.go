@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+
 	"github.com/crossplane/upjet/v2/pkg/config"
 )
 
@@ -18,12 +20,18 @@ import (
 var ExternalNameConfigs = map[string]config.ExternalName{
 	"busbar_virtual_key": config.IdentifierFromProvider,
 	"busbar_config":      config.IdentifierFromProvider,
-	"busbar_hook":        config.NameAsIdentifier,
+	"busbar_hook": config.NewExternalNameFrom(config.NameAsIdentifier,
+		config.WithGetExternalNameFn(func(_ config.GetExternalNameFn, state map[string]any) (string, error) {
+			name, ok := state["name"].(string)
+			if !ok || name == "" {
+				return "", errors.New("hook name is missing from Terraform state")
+			}
+			return name, nil
+		})),
 }
 
 // ExternalNameConfigurations applies all external name configs listed in the
-// table ExternalNameConfigs and sets the version of those resources to v1beta1
-// assuming they will be tested.
+// table ExternalNameConfigs.
 func ExternalNameConfigurations() config.ResourceOption {
 	return func(r *config.Resource) {
 		if e, ok := ExternalNameConfigs[r.Name]; ok {

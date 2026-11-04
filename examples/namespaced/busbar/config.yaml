@@ -5,10 +5,9 @@ metadata:
   name: gateway-config
 spec:
   forProvider:
+    # Replace this minimal document with your complete gateway configuration.
     document: |
-      pools:
-        default:
-          models:
-            - openai/gpt-4o-mini
+      {"config":{"providers":{},"models":{},"pools":{}}}
   providerConfigRef:
+    kind: ClusterProviderConfig
     name: default

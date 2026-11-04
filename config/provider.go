@@ -22,17 +22,9 @@ var providerSchema string
 //go:embed provider-metadata.yaml
 var providerMetadata string
 
-// frameworkResources is the set of Terraform resources served by the busbar
-// provider via the terraform-plugin-framework (protocol 6), as opposed to the
-// legacy SDKv2. All busbar resources are framework-based, so the SDKv2 include
-// list is empty and every resource is registered here.
-//
-// This list drives Upjet's code generation to emit the framework-flavored
-// conversion/controller code. At runtime, the corresponding
-// terraform-plugin-framework provider server is registered in
-// cmd/provider/main.go via WithTerraformPluginFrameworkProvider so the shared
-// native runner can reattach to it.
-var frameworkResources = []string{
+// cliResources lists the framework-backed Terraform resources generated from
+// the published schema and reconciled with the Terraform CLI runtime.
+var cliResources = []string{
 	"busbar_virtual_key$",
 	"busbar_hook$",
 	"busbar_config$",
@@ -45,7 +37,7 @@ func GetProvider() *ujconfig.Provider {
 		// CLI-runtime path: resources are configured by name and generated from
 		// schema.json; the actual terraform-provider-busbar binary is driven at
 		// runtime via the shared Terraform CLI/native runner.
-		ujconfig.WithIncludeList(frameworkResources),
+		ujconfig.WithIncludeList(cliResources),
 		ujconfig.WithFeaturesPackage("internal/features"),
 		ujconfig.WithDefaultResourceOptions(
 			ExternalNameConfigurations(),
@@ -68,7 +60,7 @@ func GetProviderNamespaced() *ujconfig.Provider {
 		// CLI-runtime path: resources are configured by name and generated from
 		// schema.json; the actual terraform-provider-busbar binary is driven at
 		// runtime via the shared Terraform CLI/native runner.
-		ujconfig.WithIncludeList(frameworkResources),
+		ujconfig.WithIncludeList(cliResources),
 		ujconfig.WithFeaturesPackage("internal/features"),
 		ujconfig.WithDefaultResourceOptions(
 			ExternalNameConfigurations(),

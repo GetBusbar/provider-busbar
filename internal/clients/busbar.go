@@ -21,11 +21,10 @@ const (
 	errGetProviderConfig    = "cannot get referenced ProviderConfig"
 	errTrackUsage           = "cannot track ProviderConfig usage"
 	errExtractCredentials   = "cannot extract credentials"
-	errUnmarshalCredentials = "cannot unmarshal template credentials as JSON"
+	errUnmarshalCredentials = "cannot unmarshal busbar credentials as JSON"
 )
 
-// TerraformSetupBuilder builds Terraform a terraform.SetupFn function which
-// returns Terraform provider setup configuration
+// TerraformSetupBuilder returns a function that builds Terraform provider setup configuration.
 func TerraformSetupBuilder(version, providerSource, providerVersion string) terraform.SetupFn {
 	return func(ctx context.Context, client client.Client, mg resource.Managed) (terraform.Setup, error) {
 		ps := terraform.Setup{
@@ -45,29 +44,79 @@ func TerraformSetupBuilder(version, providerSource, providerVersion string) terr
 		if err != nil {
 			return ps, errors.Wrap(err, errExtractCredentials)
 		}
-		creds := map[string]string{}
-		if err := json.Unmarshal(data, &creds); err != nil {
-			return ps, errors.Wrap(err, errUnmarshalCredentials)
-		}
-
-		// Map the ProviderConfig credential JSON onto the busbar Terraform
-		// provider configuration block. Only endpoint + token are required; the
-		// TLS knobs are optional and passed through when present.
-		ps.Configuration = map[string]any{}
-		for _, k := range []string{
-			"endpoint",
-			"token",
-			"client_cert_pem",
-			"client_key_pem",
-			"ca_cert_pem",
-			"insecure",
-		} {
-			if v, ok := creds[k]; ok && v != "" {
-				ps.Configuration[k] = v
-			}
+		ps.Configuration, err = parseCredentials(data)
+		if err != nil {
+			return ps, err
 		}
 		return ps, nil
 	}
+}
+
+// parseCredentials preserves the Terraform schema's value types. Legacy
+// string-encoded booleans remain accepted for existing credential Secrets.
+func parseCredentials(data []byte) (map[string]any, error) {
+	creds := map[string]json.RawMessage{}
+	if err := json.Unmarshal(data, &creds); err != nil {
+		return nil, errors.New(errUnmarshalCredentials)
+	}
+	configuration := map[string]any{}
+	for _, key := range []string{"endpoint", "token", "client_cert_pem", "client_key_pem", "ca_cert_pem", "insecure"} {
+		raw, ok := creds[key]
+		if !ok || string(raw) == "null" {
+			continue
+		}
+		value, err := parseCredentialValue(key, raw)
+		if err != nil {
+			return nil, err
+		}
+		if value != nil {
+			configuration[key] = value
+		}
+	}
+	return configuration, nil
+}
+
+func parseCredentialValue(key string, raw json.RawMessage) (any, error) {
+	if key == "insecure" {
+		value, err := parseInsecure(raw)
+		if err != nil {
+			return nil, err
+		}
+		if value == nil {
+			return nil, nil
+		}
+		return *value, nil
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil, errors.Errorf("invalid credential type for %s", key)
+	}
+	if value == "" {
+		return nil, nil
+	}
+	return value, nil
+}
+
+func parseInsecure(raw json.RawMessage) (*bool, error) {
+	var value bool
+	if err := json.Unmarshal(raw, &value); err == nil {
+		return &value, nil
+	}
+	var legacy string
+	if err := json.Unmarshal(raw, &legacy); err != nil {
+		return nil, errors.New("insecure must be a boolean")
+	}
+	switch legacy {
+	case "":
+		return nil, nil
+	case "true", "1":
+		value = true
+	case "false", "0":
+		value = false
+	default:
+		return nil, errors.New("insecure must be a boolean")
+	}
+	return &value, nil
 }
 
 func toSharedPCSpec(pc *clusterv1beta1.ProviderConfig) (*namespacedv1beta1.ProviderConfigSpec, error) {
