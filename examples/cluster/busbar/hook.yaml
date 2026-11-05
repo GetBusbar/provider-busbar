@@ -5,9 +5,10 @@ metadata:
 spec:
   forProvider:
     kind: gate
-    at: request
+    module: pii-redactor
+    phase:
+      - request
     priority: 100
     prompt: rw
-    webhook: https://pii-redactor.example.com/hook
   providerConfigRef:
     name: default

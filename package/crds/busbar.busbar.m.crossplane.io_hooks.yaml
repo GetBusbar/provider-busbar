@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: hooks.busbar.busbar.m.crossplane.io
 spec:
   group: busbar.busbar.m.crossplane.io
@@ -34,7 +34,11 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Hook is the Schema for the Hooks API. <no value>
+        description: Hook is the Schema for the Hooks API. A routing hook backed by
+          an installed signed plugin (POST/GET/PUT/DELETE /api/v1/admin/hooks). The
+          grant fields kind, prompt, and user are immutable; changing them replaces
+          the hook. Settings are sensitive and write-only on current gateways; import
+          cannot recover them.
         properties:
           apiVersion:
             description: |-
@@ -58,58 +62,86 @@ spec:
             properties:
               forProvider:
                 properties:
-                  at:
-                    description: 'Pipeline stage: request, route, attempt, or completion.
-                      Null lets busbar place it by kind.'
-                    type: string
                   default:
-                    description: Whether this hook is the default for its stage. Write-only
-                      (not echoed by reads).
+                    description: |-
+                      (Boolean) Whether this hook is the default for its stage. Defaults to false.
+                      Whether this hook is the default for its stage. Defaults to false.
                     type: boolean
                   global:
-                    description: Whether the hook applies globally (all pools). Defaults
-                      to false. May read back true if wired via global_hooks.
+                    description: |-
+                      (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if attached globally.
+                      Whether the hook applies globally (all pools). Defaults to false. May read back true if attached globally.
                     type: boolean
                   kind:
-                    description: 'Transport contract: tap (fire-and-forget, non-blocking)
-                      or gate (blocking, may rewrite/reject). Immutable grant; changing
-                      it replaces the hook.'
+                    description: |-
+                      and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                      Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                    type: string
+                  module:
+                    description: |-
+                      (String) Signed hook plugin name or alias installed on the gateway.
+                      Signed hook plugin name or alias installed on the gateway.
                     type: string
                   onEmpty:
-                    description: 'Fallback policy when the hook yields an empty ranking:
-                      weighted, reject, or first. Write-only (not echoed by reads).'
+                    description: |-
+                      (String) Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Unset reads back null.
+                      Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Unset reads back null.
                     type: string
                   onError:
-                    description: 'Behavior when the hook errors/times out: a terminal
-                      (weighted, reject, first, nothing) or another hook name. Defaults
-                      to nothing.'
+                    description: |-
+                      (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
+                      Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
                     type: string
+                  phase:
+                    description: |-
+                      (List of String) Configured pipeline stages: request, candidate, routing, or response. Omitted or empty selects all four core stages. Reads preserve the configured list.
+                      Configured pipeline stages: request, candidate, routing, or response. Omitted or empty selects all four core stages. Reads preserve the configured list.
+                    items:
+                      type: string
+                    type: array
                   priority:
-                    description: Ordering priority within a stage. Defaults to 0.
+                    description: |-
+                      (Number) Ordering priority within a stage. Defaults to 0.
+                      Ordering priority within a stage. Defaults to 0.
                     type: number
                   prompt:
-                    description: 'Prompt-content access grant: no, ro, or rw. Defaults
-                      to no. Immutable grant; changing it replaces the hook. (rw is
-                      invalid on a tap.)'
+                    description: |-
+                      content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
+                      Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
                     type: string
-                  settings:
-                    description: Opaque per-hook settings as a JSON object string
-                      (<= 64KiB, <= 256 keys). Defaults to {}.
-                    type: string
+                  settingsSecretRef:
+                    description: |-
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
                   socket:
-                    description: Unix socket path to the hook process. Exactly one
-                      of socket or webhook.
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; use module and plugin settings.
+                      Unsupported since busbar 1.5; use module and plugin settings.
                     type: string
                   timeoutMs:
-                    description: Per-call timeout in milliseconds. Defaults to 1.
+                    description: |-
+                      call timeout in milliseconds. Defaults to 1.
+                      Per-call timeout in milliseconds. Defaults to 1.
                     type: number
                   user:
-                    description: 'Caller-identity access grant: no or ro. Defaults
-                      to no. Immutable grant; changing it replaces the hook.'
+                    description: |-
+                      identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
+                      Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
                     type: string
                   webhook:
-                    description: Webhook URL for the hook. Exactly one of socket or
-                      webhook.
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; use module and plugin settings.
+                      Unsupported since busbar 1.5; use module and plugin settings.
                     type: string
                 type: object
               initProvider:
@@ -125,58 +157,86 @@ spec:
                   for example because of an external controller is managing them, like an
                   autoscaler.
                 properties:
-                  at:
-                    description: 'Pipeline stage: request, route, attempt, or completion.
-                      Null lets busbar place it by kind.'
-                    type: string
                   default:
-                    description: Whether this hook is the default for its stage. Write-only
-                      (not echoed by reads).
+                    description: |-
+                      (Boolean) Whether this hook is the default for its stage. Defaults to false.
+                      Whether this hook is the default for its stage. Defaults to false.
                     type: boolean
                   global:
-                    description: Whether the hook applies globally (all pools). Defaults
-                      to false. May read back true if wired via global_hooks.
+                    description: |-
+                      (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if attached globally.
+                      Whether the hook applies globally (all pools). Defaults to false. May read back true if attached globally.
                     type: boolean
                   kind:
-                    description: 'Transport contract: tap (fire-and-forget, non-blocking)
-                      or gate (blocking, may rewrite/reject). Immutable grant; changing
-                      it replaces the hook.'
+                    description: |-
+                      and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                      Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                    type: string
+                  module:
+                    description: |-
+                      (String) Signed hook plugin name or alias installed on the gateway.
+                      Signed hook plugin name or alias installed on the gateway.
                     type: string
                   onEmpty:
-                    description: 'Fallback policy when the hook yields an empty ranking:
-                      weighted, reject, or first. Write-only (not echoed by reads).'
+                    description: |-
+                      (String) Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Unset reads back null.
+                      Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Unset reads back null.
                     type: string
                   onError:
-                    description: 'Behavior when the hook errors/times out: a terminal
-                      (weighted, reject, first, nothing) or another hook name. Defaults
-                      to nothing.'
+                    description: |-
+                      (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
+                      Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
                     type: string
+                  phase:
+                    description: |-
+                      (List of String) Configured pipeline stages: request, candidate, routing, or response. Omitted or empty selects all four core stages. Reads preserve the configured list.
+                      Configured pipeline stages: request, candidate, routing, or response. Omitted or empty selects all four core stages. Reads preserve the configured list.
+                    items:
+                      type: string
+                    type: array
                   priority:
-                    description: Ordering priority within a stage. Defaults to 0.
+                    description: |-
+                      (Number) Ordering priority within a stage. Defaults to 0.
+                      Ordering priority within a stage. Defaults to 0.
                     type: number
                   prompt:
-                    description: 'Prompt-content access grant: no, ro, or rw. Defaults
-                      to no. Immutable grant; changing it replaces the hook. (rw is
-                      invalid on a tap.)'
+                    description: |-
+                      content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
+                      Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
                     type: string
-                  settings:
-                    description: Opaque per-hook settings as a JSON object string
-                      (<= 64KiB, <= 256 keys). Defaults to {}.
-                    type: string
+                  settingsSecretRef:
+                    description: |-
+                      hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                      Opaque per-hook settings as a JSON object string (<= 64KiB, <= 256 keys). Defaults to {}.
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
                   socket:
-                    description: Unix socket path to the hook process. Exactly one
-                      of socket or webhook.
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; use module and plugin settings.
+                      Unsupported since busbar 1.5; use module and plugin settings.
                     type: string
                   timeoutMs:
-                    description: Per-call timeout in milliseconds. Defaults to 1.
+                    description: |-
+                      call timeout in milliseconds. Defaults to 1.
+                      Per-call timeout in milliseconds. Defaults to 1.
                     type: number
                   user:
-                    description: 'Caller-identity access grant: no or ro. Defaults
-                      to no. Immutable grant; changing it replaces the hook.'
+                    description: |-
+                      identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
+                      Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
                     type: string
                   webhook:
-                    description: Webhook URL for the hook. Exactly one of socket or
-                      webhook.
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; use module and plugin settings.
+                      Unsupported since busbar 1.5; use module and plugin settings.
                     type: string
                 type: object
               managementPolicies:
@@ -242,65 +302,83 @@ spec:
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
                 || ''Update'' in self.managementPolicies) || has(self.forProvider.kind)
                 || (has(self.initProvider) && has(self.initProvider.kind))'
+            - message: spec.forProvider.module is a required parameter
+              rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.module)
+                || (has(self.initProvider) && has(self.initProvider.module))'
           status:
             description: HookStatus defines the observed state of Hook.
             properties:
               atProvider:
                 properties:
-                  at:
-                    description: 'Pipeline stage: request, route, attempt, or completion.
-                      Null lets busbar place it by kind.'
-                    type: string
                   default:
-                    description: Whether this hook is the default for its stage. Write-only
-                      (not echoed by reads).
+                    description: |-
+                      (Boolean) Whether this hook is the default for its stage. Defaults to false.
+                      Whether this hook is the default for its stage. Defaults to false.
                     type: boolean
                   global:
-                    description: Whether the hook applies globally (all pools). Defaults
-                      to false. May read back true if wired via global_hooks.
+                    description: |-
+                      (Boolean) Whether the hook applies globally (all pools). Defaults to false. May read back true if attached globally.
+                      Whether the hook applies globally (all pools). Defaults to false. May read back true if attached globally.
                     type: boolean
                   id:
                     type: string
                   kind:
-                    description: 'Transport contract: tap (fire-and-forget, non-blocking)
-                      or gate (blocking, may rewrite/reject). Immutable grant; changing
-                      it replaces the hook.'
+                    description: |-
+                      and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                      Transport contract: tap (fire-and-forget, non-blocking) or gate (blocking, may rewrite/reject). Immutable grant; changing it replaces the hook.
+                    type: string
+                  module:
+                    description: |-
+                      (String) Signed hook plugin name or alias installed on the gateway.
+                      Signed hook plugin name or alias installed on the gateway.
                     type: string
                   onEmpty:
-                    description: 'Fallback policy when the hook yields an empty ranking:
-                      weighted, reject, or first. Write-only (not echoed by reads).'
+                    description: |-
+                      (String) Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Unset reads back null.
+                      Fallback policy when the hook yields an empty ranking: weighted, reject, or first. Unset reads back null.
                     type: string
                   onError:
-                    description: 'Behavior when the hook errors/times out: a terminal
-                      (weighted, reject, first, nothing) or another hook name. Defaults
-                      to nothing.'
+                    description: |-
+                      (String) Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
+                      Behavior when the hook errors/times out: a terminal (weighted, reject, first, nothing) or another hook name. Defaults to nothing.
                     type: string
+                  phase:
+                    description: |-
+                      (List of String) Configured pipeline stages: request, candidate, routing, or response. Omitted or empty selects all four core stages. Reads preserve the configured list.
+                      Configured pipeline stages: request, candidate, routing, or response. Omitted or empty selects all four core stages. Reads preserve the configured list.
+                    items:
+                      type: string
+                    type: array
                   priority:
-                    description: Ordering priority within a stage. Defaults to 0.
+                    description: |-
+                      (Number) Ordering priority within a stage. Defaults to 0.
+                      Ordering priority within a stage. Defaults to 0.
                     type: number
                   prompt:
-                    description: 'Prompt-content access grant: no, ro, or rw. Defaults
-                      to no. Immutable grant; changing it replaces the hook. (rw is
-                      invalid on a tap.)'
-                    type: string
-                  settings:
-                    description: Opaque per-hook settings as a JSON object string
-                      (<= 64KiB, <= 256 keys). Defaults to {}.
+                    description: |-
+                      content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
+                      Prompt-content access grant: no, ro, or rw. Defaults to no. Immutable grant; changing it replaces the hook. (rw is invalid on a tap.)
                     type: string
                   socket:
-                    description: Unix socket path to the hook process. Exactly one
-                      of socket or webhook.
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; use module and plugin settings.
+                      Unsupported since busbar 1.5; use module and plugin settings.
                     type: string
                   timeoutMs:
-                    description: Per-call timeout in milliseconds. Defaults to 1.
+                    description: |-
+                      call timeout in milliseconds. Defaults to 1.
+                      Per-call timeout in milliseconds. Defaults to 1.
                     type: number
                   user:
-                    description: 'Caller-identity access grant: no or ro. Defaults
-                      to no. Immutable grant; changing it replaces the hook.'
+                    description: |-
+                      identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
+                      Caller-identity access grant: no or ro. Defaults to no. Immutable grant; changing it replaces the hook.
                     type: string
                   webhook:
-                    description: Webhook URL for the hook. Exactly one of socket or
-                      webhook.
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; use module and plugin settings.
+                      Unsupported since busbar 1.5; use module and plugin settings.
                     type: string
                 type: object
               conditions:

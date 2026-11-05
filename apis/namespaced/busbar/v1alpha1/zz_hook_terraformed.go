@@ -21,7 +21,7 @@ func (mg *Hook) GetTerraformResourceType() string {
 
 // GetConnectionDetailsMapping for this Hook
 func (tr *Hook) GetConnectionDetailsMapping() map[string]string {
-	return nil
+	return map[string]string{"settings": "settingsSecretRef"}
 }
 
 // GetObservation of this Hook

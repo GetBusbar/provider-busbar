@@ -21,7 +21,7 @@ func (mg *Config) GetTerraformResourceType() string {
 
 // GetConnectionDetailsMapping for this Config
 func (tr *Config) GetConnectionDetailsMapping() map[string]string {
-	return nil
+	return map[string]string{"document": "documentSecretRef"}
 }
 
 // GetObservation of this Config

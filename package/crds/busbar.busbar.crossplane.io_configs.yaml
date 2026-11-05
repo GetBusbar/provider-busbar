@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: configs.busbar.busbar.crossplane.io
 spec:
   group: busbar.busbar.crossplane.io
@@ -34,7 +34,13 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Config is the Schema for the Configs API. <no value>
+        description: 'Config is the Schema for the Configs API. A GitOps singleton
+          that owns the running busbar config and applies it wholesale (POST /api/v1/admin/config/apply).
+          Manage at most ONE of these per gateway. The document is the full JSON config
+          payload busbar boots from ({"config": {...}, "providers": {...}}); applying
+          it bumps config_version. Full documents are live-only and revert to disk
+          plus overlay on reload or restart; persist changes in config.yaml. The gateway
+          must allow mutations with a writable overlay.'
         properties:
           apiVersion:
             description: |-
@@ -72,13 +78,25 @@ spec:
                 type: string
               forProvider:
                 properties:
-                  document:
-                    description: 'The full config apply document as a JSON string:
-                      {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The
-                      `config` key is required; `providers` is optional. This is the
-                      write model (the boot-file shape), NOT the redacted read projection
-                      returned by GET /config.'
-                    type: string
+                  documentSecretRef:
+                    description: |-
+                      file shape), NOT the redacted read projection returned by GET /config.
+                      The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
                 type: object
               initProvider:
                 description: |-
@@ -93,13 +111,27 @@ spec:
                   for example because of an external controller is managing them, like an
                   autoscaler.
                 properties:
-                  document:
-                    description: 'The full config apply document as a JSON string:
-                      {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The
-                      `config` key is required; `providers` is optional. This is the
-                      write model (the boot-file shape), NOT the redacted read projection
-                      returned by GET /config.'
-                    type: string
+                  documentSecretRef:
+                    description: |-
+                      file shape), NOT the redacted read projection returned by GET /config.
+                      The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
+                required:
+                - documentSecretRef
                 type: object
               managementPolicies:
                 default:
@@ -188,27 +220,21 @@ spec:
             - forProvider
             type: object
             x-kubernetes-validations:
-            - message: spec.forProvider.document is a required parameter
+            - message: spec.forProvider.documentSecretRef is a required parameter
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.document)
-                || (has(self.initProvider) && has(self.initProvider.document))'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.documentSecretRef)'
           status:
             description: ConfigStatus defines the observed state of Config.
             properties:
               atProvider:
                 properties:
                   configVersion:
-                    description: The monotonic config version after the last apply.
-                      Process-local; resets to 0 on gateway restart.
+                    description: |-
+                      local; resets to 0 on gateway restart.
+                      The monotonic config version after the last apply. Process-local; resets to 0 on gateway restart.
                     type: number
-                  document:
-                    description: 'The full config apply document as a JSON string:
-                      {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The
-                      `config` key is required; `providers` is optional. This is the
-                      write model (the boot-file shape), NOT the redacted read projection
-                      returned by GET /config.'
-                    type: string
                   id:
+                    description: (String) Fixed singleton id (always "config").
                     type: string
                 type: object
               conditions:

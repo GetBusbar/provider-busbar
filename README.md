@@ -81,9 +81,11 @@ make run              # run the provider out-of-cluster
 
 Regenerating the schema (when the upstream provider changes) requires the
 `getbusbar/busbar` provider to be resolvable by `terraform providers schema`.
-Because the provider is not yet on a public registry, `config/schema.json` in
-this repo was produced from a local build of `terraform-provider-busbar` v0.1.0
-via a filesystem mirror.
+The committed `config/schema.json` was exported with Terraform 1.5.7 and the
+protocol 6 provider built from Terraform provider commit
+`2fc53c3fef3cac35f6798da7804e022dc9dc60a7`. Its SHA-256 is
+`66c5f60a6b3f81889e31c7f12e260144df698238bcd2d6794780c4d0a20a25ae`.
+The runtime binary download version is configured separately in `Makefile`.
 
 Example tests with cloud credentials require a maintainer to approve an exact
 commit in a PR comment: `/test-examples="examples/cluster/busbar" FULL_40_CHARACTER_COMMIT_SHA`.

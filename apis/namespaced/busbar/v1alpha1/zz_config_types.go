@@ -16,26 +16,27 @@ import (
 
 type ConfigInitParameters struct {
 
+	// file shape), NOT the redacted read projection returned by GET /config.
 	// The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
-	Document *string `json:"document,omitempty" tf:"document,omitempty"`
+	DocumentSecretRef v1.LocalSecretKeySelector `json:"documentSecretRef" tf:"-"`
 }
 
 type ConfigObservation struct {
 
+	// local; resets to 0 on gateway restart.
 	// The monotonic config version after the last apply. Process-local; resets to 0 on gateway restart.
 	ConfigVersion *float64 `json:"configVersion,omitempty" tf:"config_version,omitempty"`
 
-	// The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
-	Document *string `json:"document,omitempty" tf:"document,omitempty"`
-
+	// (String) Fixed singleton id (always "config").
 	ID *string `json:"id,omitempty" tf:"id,omitempty"`
 }
 
 type ConfigParameters struct {
 
+	// file shape), NOT the redacted read projection returned by GET /config.
 	// The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
 	// +kubebuilder:validation:Optional
-	Document *string `json:"document,omitempty" tf:"document,omitempty"`
+	DocumentSecretRef v1.LocalSecretKeySelector `json:"documentSecretRef" tf:"-"`
 }
 
 // ConfigSpec defines the desired state of Config
@@ -65,7 +66,7 @@ type ConfigStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
-// Config is the Schema for the Configs API. <no value>
+// Config is the Schema for the Configs API. A GitOps singleton that owns the running busbar config and applies it wholesale (POST /api/v1/admin/config/apply). Manage at most ONE of these per gateway. The document is the full JSON config payload busbar boots from ({"config": {...}, "providers": {...}}); applying it bumps config_version. Full documents are live-only and revert to disk plus overlay on reload or restart; persist changes in config.yaml. The gateway must allow mutations with a writable overlay.
 // +kubebuilder:printcolumn:name="SYNCED",type="string",JSONPath=".status.conditions[?(@.type=='Synced')].status"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="EXTERNAL-NAME",type="string",JSONPath=".metadata.annotations.crossplane\\.io/external-name"
@@ -74,7 +75,7 @@ type ConfigStatus struct {
 type Config struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.document) || (has(self.initProvider) && has(self.initProvider.document))",message="spec.forProvider.document is a required parameter"
+	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.documentSecretRef)",message="spec.forProvider.documentSecretRef is a required parameter"
 	Spec   ConfigSpec   `json:"spec"`
 	Status ConfigStatus `json:"status,omitempty"`
 }

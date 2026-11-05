@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: virtualkeys.busbar.busbar.m.crossplane.io
 spec:
   group: busbar.busbar.m.crossplane.io
@@ -34,7 +34,11 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: VirtualKey is the Schema for the VirtualKeys API. <no value>
+        description: VirtualKey is the Schema for the VirtualKeys API. A signed, expiring
+          busbar virtual key scoped to pools. The bearer token is returned once at
+          creation and stored as a sensitive value. Budget and rate limits belong
+          to gateway groups in busbar 1.5 and later; legacy key limit attributes are
+          rejected.
         properties:
           apiVersion:
             description: |-
@@ -59,36 +63,41 @@ spec:
               forProvider:
                 properties:
                   allowedPools:
-                    description: Pools this key may target. Empty/unset means unrestricted.
-                      Immutable; changing it replaces the key (the mint spec is fixed
-                      at creation).
+                    description: |-
+                      (List of String) Pools this key may target. Unset means all pools; an empty list means no pools. Immutable; changing it replaces the key (the mint spec is fixed at creation).
+                      Pools this key may target. Unset means all pools; an empty list means no pools. Immutable; changing it replaces the key (the mint spec is fixed at creation).
                     items:
                       type: string
                     type: array
                   budgetPeriod:
-                    description: 'Budget window: one of total, daily, monthly. Defaults
-                      to total. Immutable; changing it replaces the key.'
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; configure budget windows on gateway groups.
+                      Unsupported since busbar 1.5; configure budget windows on gateway groups.
                     type: string
                   issueAwsCredential:
-                    description: When true, also mint an AWS-style access-key-id +
-                      secret access key (SigV4/Bedrock inbound auth). Both are returned
-                      only at creation. Immutable.
+                    description: |-
+                      style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
+                      When true, also mint an AWS-style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
                     type: boolean
                   maxBudgetCents:
-                    description: Spend cap in cents over the budget window (>= 0).
-                      Omit for unlimited. Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure spend limits on gateway groups.
+                      Unsupported since busbar 1.5; configure spend limits on gateway groups.
                     type: number
                   name:
-                    description: Human-readable label (<= 256 chars). Immutable; changing
-                      it replaces the key.
+                    description: |-
+                      readable label (<= 256 chars). Immutable; changing it replaces the key.
+                      Human-readable label (<= 256 chars). Immutable; changing it replaces the key.
                     type: string
                   rpmLimit:
-                    description: Requests-per-minute cap (>= 1). Omit for unlimited.
-                      Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure rate limits on gateway groups.
+                      Unsupported since busbar 1.5; configure rate limits on gateway groups.
                     type: number
                   tpmLimit:
-                    description: Tokens-per-minute cap (>= 1). Omit for unlimited.
-                      Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure rate limits on gateway groups.
+                      Unsupported since busbar 1.5; configure rate limits on gateway groups.
                     type: number
                 type: object
               initProvider:
@@ -105,36 +114,41 @@ spec:
                   autoscaler.
                 properties:
                   allowedPools:
-                    description: Pools this key may target. Empty/unset means unrestricted.
-                      Immutable; changing it replaces the key (the mint spec is fixed
-                      at creation).
+                    description: |-
+                      (List of String) Pools this key may target. Unset means all pools; an empty list means no pools. Immutable; changing it replaces the key (the mint spec is fixed at creation).
+                      Pools this key may target. Unset means all pools; an empty list means no pools. Immutable; changing it replaces the key (the mint spec is fixed at creation).
                     items:
                       type: string
                     type: array
                   budgetPeriod:
-                    description: 'Budget window: one of total, daily, monthly. Defaults
-                      to total. Immutable; changing it replaces the key.'
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; configure budget windows on gateway groups.
+                      Unsupported since busbar 1.5; configure budget windows on gateway groups.
                     type: string
                   issueAwsCredential:
-                    description: When true, also mint an AWS-style access-key-id +
-                      secret access key (SigV4/Bedrock inbound auth). Both are returned
-                      only at creation. Immutable.
+                    description: |-
+                      style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
+                      When true, also mint an AWS-style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
                     type: boolean
                   maxBudgetCents:
-                    description: Spend cap in cents over the budget window (>= 0).
-                      Omit for unlimited. Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure spend limits on gateway groups.
+                      Unsupported since busbar 1.5; configure spend limits on gateway groups.
                     type: number
                   name:
-                    description: Human-readable label (<= 256 chars). Immutable; changing
-                      it replaces the key.
+                    description: |-
+                      readable label (<= 256 chars). Immutable; changing it replaces the key.
+                      Human-readable label (<= 256 chars). Immutable; changing it replaces the key.
                     type: string
                   rpmLimit:
-                    description: Requests-per-minute cap (>= 1). Omit for unlimited.
-                      Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure rate limits on gateway groups.
+                      Unsupported since busbar 1.5; configure rate limits on gateway groups.
                     type: number
                   tpmLimit:
-                    description: Tokens-per-minute cap (>= 1). Omit for unlimited.
-                      Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure rate limits on gateway groups.
+                      Unsupported since busbar 1.5; configure rate limits on gateway groups.
                     type: number
                 type: object
               managementPolicies:
@@ -206,49 +220,59 @@ spec:
               atProvider:
                 properties:
                   allowedPools:
-                    description: Pools this key may target. Empty/unset means unrestricted.
-                      Immutable; changing it replaces the key (the mint spec is fixed
-                      at creation).
+                    description: |-
+                      (List of String) Pools this key may target. Unset means all pools; an empty list means no pools. Immutable; changing it replaces the key (the mint spec is fixed at creation).
+                      Pools this key may target. Unset means all pools; an empty list means no pools. Immutable; changing it replaces the key (the mint spec is fixed at creation).
                     items:
                       type: string
                     type: array
                   awsAccessKeyId:
-                    description: AWS-style access key id, when issue_aws_credential
-                      is true. Returned only at creation.
+                    description: |-
+                      style access key id, when issue_aws_credential is true. Returned only at creation.
+                      AWS-style access key id, when issue_aws_credential is true. Returned only at creation.
                     type: string
                   budgetPeriod:
-                    description: 'Budget window: one of total, daily, monthly. Defaults
-                      to total. Immutable; changing it replaces the key.'
+                    description: |-
+                      (String, Deprecated) Unsupported since busbar 1.5; configure budget windows on gateway groups.
+                      Unsupported since busbar 1.5; configure budget windows on gateway groups.
                     type: string
                   createdAt:
-                    description: Epoch seconds the key was minted.
+                    description: |-
+                      (Number) Epoch seconds the key was minted.
+                      Epoch seconds the key was minted.
                     type: number
                   enabled:
-                    description: Whether the key currently resolves. A key is created
-                      enabled; disable it out-of-band via the admin API.
+                    description: |-
+                      of-band via the admin API.
+                      Whether the key currently resolves. A key is created enabled; disable it out-of-band via the admin API.
                     type: boolean
                   id:
+                    description: assigned key id (e.g. vk_0123456789abcdef).
                     type: string
                   issueAwsCredential:
-                    description: When true, also mint an AWS-style access-key-id +
-                      secret access key (SigV4/Bedrock inbound auth). Both are returned
-                      only at creation. Immutable.
+                    description: |-
+                      style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
+                      When true, also mint an AWS-style access-key-id + secret access key (SigV4/Bedrock inbound auth). Both are returned only at creation. Immutable.
                     type: boolean
                   maxBudgetCents:
-                    description: Spend cap in cents over the budget window (>= 0).
-                      Omit for unlimited. Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure spend limits on gateway groups.
+                      Unsupported since busbar 1.5; configure spend limits on gateway groups.
                     type: number
                   name:
-                    description: Human-readable label (<= 256 chars). Immutable; changing
-                      it replaces the key.
+                    description: |-
+                      readable label (<= 256 chars). Immutable; changing it replaces the key.
+                      Human-readable label (<= 256 chars). Immutable; changing it replaces the key.
                     type: string
                   rpmLimit:
-                    description: Requests-per-minute cap (>= 1). Omit for unlimited.
-                      Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure rate limits on gateway groups.
+                      Unsupported since busbar 1.5; configure rate limits on gateway groups.
                     type: number
                   tpmLimit:
-                    description: Tokens-per-minute cap (>= 1). Omit for unlimited.
-                      Mutable via PATCH.
+                    description: |-
+                      (Number, Deprecated) Unsupported since busbar 1.5; configure rate limits on gateway groups.
+                      Unsupported since busbar 1.5; configure rate limits on gateway groups.
                     type: number
                 type: object
               conditions:

@@ -1,0 +1,20 @@
+apiVersion: busbar.busbar.crossplane.io/v1alpha1
+kind: Hook
+metadata:
+  annotations:
+    meta.upbound.io/example-id: busbar/v1alpha1/hook
+  labels:
+    testing.upbound.io/example-name: ranker
+  name: ranker
+spec:
+  forProvider:
+    kind: gate
+    module: my-installed-ranker
+    onError: weighted
+    priority: 10
+    prompt: ro
+    settingsSecretRef:
+      key: example-key
+      name: example-secret
+      namespace: upbound-system
+    timeoutMs: 100
