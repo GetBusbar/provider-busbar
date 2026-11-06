@@ -11,10 +11,13 @@ export TERRAFORM_VERSION ?= 1.5.7
 TERRAFORM_VERSION_VALID := $(shell [ "$(TERRAFORM_VERSION)" = "`printf "$(TERRAFORM_VERSION)\n1.6" | sort -V | head -n1`" ] && echo 1 || echo 0)
 
 # The busbar Terraform provider (terraform-plugin-framework / protocol 6).
-# Registry source getbusbar/busbar, version 0.1.0. The runtime pulls this
-# provider binary; the generation pipeline reads its schema (config/schema.json).
+# The filesystem mirror uses the local selection version 0.1.0. Image builds
+# compile the exact upstream source revision below; no registry release is needed.
+# The generation pipeline reads its actual schema (config/schema.json).
 export TERRAFORM_PROVIDER_SOURCE ?= getbusbar/busbar
 export TERRAFORM_PROVIDER_REPO ?= https://github.com/GetBusbar/terraform-provider-busbar
+export TERRAFORM_PROVIDER_REF ?= 2bf37cc3e31256a8028c5ae94aca13abc0dce37f
+export TERRAFORM_PROVIDER_GO_VERSION ?= 1.27.3
 export TERRAFORM_PROVIDER_VERSION ?= 0.1.0
 export TERRAFORM_PROVIDER_DOWNLOAD_NAME ?= terraform-provider-busbar
 export TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX ?= https://github.com/GetBusbar/terraform-provider-busbar/releases/download/v$(TERRAFORM_PROVIDER_VERSION)
@@ -107,8 +110,11 @@ build.init: $(UP) $(CROSSPLANE_CLI) check-terraform-version
 # ====================================================================================
 # Setup Terraform for fetching provider schema
 TERRAFORM := $(TOOLS_HOST_DIR)/terraform-$(TERRAFORM_VERSION)
-TERRAFORM_WORKDIR := $(WORK_DIR)/terraform
+TERRAFORM_WORKDIR := $(abspath $(WORK_DIR)/terraform)
 TERRAFORM_PROVIDER_SCHEMA := config/schema.json
+TERRAFORM_PROVIDER_WORKDIR := $(abspath $(WORK_DIR)/$(TERRAFORM_PROVIDER_SOURCE))
+TERRAFORM_PROVIDER_LOCAL_BINARY := $(abspath $(WORK_DIR)/terraform-provider-bin/$(TERRAFORM_NATIVE_PROVIDER_BINARY))
+TERRAFORM_PROVIDER_DEV_CONFIG := $(TERRAFORM_WORKDIR)/dev.tfrc
 
 check-terraform-version:
 ifneq ($(TERRAFORM_VERSION_VALID),1)
@@ -124,24 +130,23 @@ $(TERRAFORM): check-terraform-version
 	@rm -fr $(TOOLS_HOST_DIR)/tmp-terraform
 	@$(OK) installing terraform $(HOSTOS)-$(HOSTARCH)
 
-$(TERRAFORM_PROVIDER_SCHEMA): $(TERRAFORM)
-	@$(INFO) generating provider schema for $(TERRAFORM_PROVIDER_SOURCE) $(TERRAFORM_PROVIDER_VERSION)
-	@mkdir -p $(TERRAFORM_WORKDIR)
-	@echo '{"terraform":[{"required_providers":[{"provider":{"source":"'"$(TERRAFORM_PROVIDER_SOURCE)"'","version":"'"$(TERRAFORM_PROVIDER_VERSION)"'"}}],"required_version":"'"$(TERRAFORM_VERSION)"'"}]}' > $(TERRAFORM_WORKDIR)/main.tf.json
-	@$(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) init > $(TERRAFORM_WORKDIR)/terraform-logs.txt 2>&1
-	@$(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) providers schema -json=true > $(TERRAFORM_PROVIDER_SCHEMA) 2>> $(TERRAFORM_WORKDIR)/terraform-logs.txt
-	@$(OK) generating provider schema for $(TERRAFORM_PROVIDER_SOURCE) $(TERRAFORM_PROVIDER_VERSION)
+terraform-provider.source:
+	@GOOS="$$(GOTOOLCHAIN=local go env GOHOSTOS)" GOARCH="$$(GOTOOLCHAIN=local go env GOHOSTARCH)" scripts/build_terraform_provider.sh "$(TERRAFORM_PROVIDER_WORKDIR)" "$(TERRAFORM_PROVIDER_LOCAL_BINARY)"
 
-pull-docs:
-	@if [ ! -d "$(WORK_DIR)/$(TERRAFORM_PROVIDER_SOURCE)" ]; then \
-  		mkdir -p "$(WORK_DIR)/$(TERRAFORM_PROVIDER_SOURCE)" && \
-		git clone -c advice.detachedHead=false --depth 1 --filter=blob:none --branch "v$(TERRAFORM_PROVIDER_VERSION)" --sparse "$(TERRAFORM_PROVIDER_REPO)" "$(WORK_DIR)/$(TERRAFORM_PROVIDER_SOURCE)"; \
-	fi
-	@git -C "$(WORK_DIR)/$(TERRAFORM_PROVIDER_SOURCE)" sparse-checkout set "$(TERRAFORM_DOCS_PATH)"
+$(TERRAFORM_PROVIDER_SCHEMA): $(TERRAFORM) terraform-provider.source
+	@$(INFO) generating provider schema from $(TERRAFORM_PROVIDER_REF)
+	@mkdir -p $(TERRAFORM_WORKDIR)
+	@printf '%s\n' '{"terraform":{"required_providers":{"busbar":{"source":"$(TERRAFORM_PROVIDER_SOURCE)","version":"$(TERRAFORM_PROVIDER_VERSION)"}},"required_version":"$(TERRAFORM_VERSION)"}}' > $(TERRAFORM_WORKDIR)/main.tf.json
+	@printf '%s\n' 'provider_installation {' '  dev_overrides {' '    "$(TERRAFORM_PROVIDER_SOURCE)" = "$(dir $(TERRAFORM_PROVIDER_LOCAL_BINARY))"' '  }' '  direct {}' '}' > $(TERRAFORM_PROVIDER_DEV_CONFIG)
+	@TF_CLI_CONFIG_FILE="$(TERRAFORM_PROVIDER_DEV_CONFIG)" $(TERRAFORM) -chdir=$(TERRAFORM_WORKDIR) providers schema -json > $(TERRAFORM_PROVIDER_SCHEMA).tmp 2> $(TERRAFORM_WORKDIR)/terraform-logs.txt && mv $(TERRAFORM_PROVIDER_SCHEMA).tmp $(TERRAFORM_PROVIDER_SCHEMA)
+	@$(OK) generating provider schema from $(TERRAFORM_PROVIDER_REF)
+
+pull-docs: terraform-provider.source
+	@test -d "$(TERRAFORM_PROVIDER_WORKDIR)/$(TERRAFORM_DOCS_PATH)"
 
 generate.init: $(TERRAFORM_PROVIDER_SCHEMA) pull-docs
 
-.PHONY: $(TERRAFORM_PROVIDER_SCHEMA) pull-docs check-terraform-version
+.PHONY: $(TERRAFORM_PROVIDER_SCHEMA) terraform-provider.source pull-docs check-terraform-version
 # ====================================================================================
 # Targets
 

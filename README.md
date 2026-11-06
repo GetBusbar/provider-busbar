@@ -83,9 +83,15 @@ Regenerating the schema (when the upstream provider changes) requires the
 `getbusbar/busbar` provider to be resolvable by `terraform providers schema`.
 The committed `config/schema.json` was exported with Terraform 1.5.7 and the
 protocol 6 provider built from Terraform provider commit
-`2fc53c3fef3cac35f6798da7804e022dc9dc60a7`. Its SHA-256 is
+`2bf37cc3e31256a8028c5ae94aca13abc0dce37f`. Its SHA-256 is
 `66c5f60a6b3f81889e31c7f12e260144df698238bcd2d6794780c4d0a20a25ae`.
-The runtime binary download version is configured separately in `Makefile`.
+Image builds compile the exact `TERRAFORM_PROVIDER_REF` commit configured in
+`Makefile`, using immutable module locks and the pinned Go toolchain. The
+filesystem mirror retains its local provider selection version; this does not
+require an external registry release.
+`make generate` uses the same checked source build through a Terraform 1.5.7
+development override and reads docs from that checkout. Put the configured
+Go version on `PATH` before generating; automatic toolchain downloads are disabled.
 
 Example tests with cloud credentials require a maintainer to approve an exact
 commit in a PR comment: `/test-examples="examples/cluster/busbar" FULL_40_CHARACTER_COMMIT_SHA`.
