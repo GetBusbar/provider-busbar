@@ -58,7 +58,15 @@ func (tr *Config) GetParameters() (map[string]any, error) {
 		return nil, err
 	}
 	base := map[string]any{}
-	return base, json.TFParser.Unmarshal(p, &base)
+	if err := json.TFParser.Unmarshal(p, &base); err != nil {
+		return nil, err
+	}
+	// Upjet computes ignore_changes before resolving Secret references.
+	// Represent presence only; sensitive resolution replaces this marker.
+	if tr.Spec.ForProvider.DocumentSecretRef != nil {
+		base["document"] = ""
+	}
+	return base, nil
 }
 
 // SetParameters for this Config
@@ -77,7 +85,15 @@ func (tr *Config) GetInitParameters() (map[string]any, error) {
 		return nil, err
 	}
 	base := map[string]any{}
-	return base, json.TFParser.Unmarshal(p, &base)
+	if err := json.TFParser.Unmarshal(p, &base); err != nil {
+		return nil, err
+	}
+	// Upjet computes ignore_changes before resolving Secret references.
+	// Represent presence only; sensitive resolution replaces this marker.
+	if tr.Spec.InitProvider.DocumentSecretRef != nil {
+		base["document"] = ""
+	}
+	return base, nil
 }
 
 // GetInitParameters of this Config

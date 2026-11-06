@@ -1,11 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: default
+  name: gateway-config-document
+stringData:
+  # Replace this minimal document with your complete gateway configuration.
+  document: |
+    {"config":{"providers":{},"models":{},"pools":{}}}
+---
 apiVersion: busbar.busbar.crossplane.io/v1alpha1
 kind: Config
 metadata:
   name: gateway-config
 spec:
   forProvider:
-    # Replace this minimal document with your complete gateway configuration.
-    document: |
-      {"config":{"providers":{},"models":{},"pools":{}}}
+    documentSecretRef:
+      namespace: default
+      name: gateway-config-document
+      key: document
   providerConfigRef:
     name: default

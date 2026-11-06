@@ -106,8 +106,6 @@ spec:
                     - key
                     - name
                     type: object
-                required:
-                - documentSecretRef
                 type: object
               managementPolicies:
                 default:
@@ -168,9 +166,11 @@ spec:
             - forProvider
             type: object
             x-kubernetes-validations:
-            - message: spec.forProvider.documentSecretRef is a required parameter
+            - message: spec.forProvider.documentSecretRef or spec.initProvider.documentSecretRef
+                is required
               rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies
-                || ''Update'' in self.managementPolicies) || has(self.forProvider.documentSecretRef)'
+                || ''Update'' in self.managementPolicies) || has(self.forProvider.documentSecretRef)
+                || (has(self.initProvider) && has(self.initProvider.documentSecretRef))'
           status:
             description: ConfigStatus defines the observed state of Config.
             properties:

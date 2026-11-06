@@ -17,7 +17,7 @@ type ConfigInitParameters struct {
 
 	// file shape), NOT the redacted read projection returned by GET /config.
 	// The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
-	DocumentSecretRef v1.SecretKeySelector `json:"documentSecretRef" tf:"-"`
+	DocumentSecretRef *v1.SecretKeySelector `json:"documentSecretRef,omitempty" tf:"-"`
 }
 
 type ConfigObservation struct {
@@ -35,7 +35,7 @@ type ConfigParameters struct {
 	// file shape), NOT the redacted read projection returned by GET /config.
 	// The full config apply document as a JSON string: {"config": {DeployCfg}, "providers": {name: ProviderDef}}. The `config` key is required; `providers` is optional. This is the write model (the boot-file shape), NOT the redacted read projection returned by GET /config.
 	// +kubebuilder:validation:Optional
-	DocumentSecretRef v1.SecretKeySelector `json:"documentSecretRef" tf:"-"`
+	DocumentSecretRef *v1.SecretKeySelector `json:"documentSecretRef,omitempty" tf:"-"`
 }
 
 // ConfigSpec defines the desired state of Config
@@ -74,7 +74,7 @@ type ConfigStatus struct {
 type Config struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.documentSecretRef)",message="spec.forProvider.documentSecretRef is a required parameter"
+	// +kubebuilder:validation:XValidation:rule="!('*' in self.managementPolicies || 'Create' in self.managementPolicies || 'Update' in self.managementPolicies) || has(self.forProvider.documentSecretRef) || (has(self.initProvider) && has(self.initProvider.documentSecretRef))",message="spec.forProvider.documentSecretRef or spec.initProvider.documentSecretRef is required"
 	Spec   ConfigSpec   `json:"spec"`
 	Status ConfigStatus `json:"status,omitempty"`
 }
